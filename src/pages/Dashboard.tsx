@@ -3,6 +3,9 @@ import { supabase } from '../lib/supabase';
 import { DashboardStats } from '../types/database';
 import { formatCurrency } from '../lib/utils';
 import { Package, DollarSign, Truck, AlertCircle } from 'lucide-react';
+import WhatsAppChatsReport from '../components/reports/WhatsAppChatsReport';
+import OrderAnalyticsReport from '../components/reports/OrderAnalyticsReport';
+import SchoolPerformanceReport from '../components/reports/SchoolPerformanceReport';
 
 export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats>({
@@ -115,22 +118,10 @@ export default function Dashboard() {
         })}
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-        <h2 className="text-xl font-bold text-slate-900 mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <button className="p-4 border-2 border-slate-200 rounded-lg hover:border-slate-900 transition text-left">
-            <h3 className="font-semibold text-slate-900 mb-1">View Pending Orders</h3>
-            <p className="text-sm text-slate-600">Review and process new orders</p>
-          </button>
-          <button className="p-4 border-2 border-slate-200 rounded-lg hover:border-slate-900 transition text-left">
-            <h3 className="font-semibold text-slate-900 mb-1">Add New School</h3>
-            <p className="text-sm text-slate-600">Register a new school in the system</p>
-          </button>
-          <button className="p-4 border-2 border-slate-200 rounded-lg hover:border-slate-900 transition text-left">
-            <h3 className="font-semibold text-slate-900 mb-1">Manage Inventory</h3>
-            <p className="text-sm text-slate-600">Update items and stock levels</p>
-          </button>
-        </div>
+      <div className="space-y-6">
+        <WhatsAppChatsReport />
+        <OrderAnalyticsReport />
+        <SchoolPerformanceReport />
       </div>
     </div>
   );
