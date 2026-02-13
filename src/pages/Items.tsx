@@ -247,8 +247,8 @@ export default function Items() {
                 <h2 className="text-xl font-bold text-slate-900">Groups</h2>
                 <button
                   onClick={() => {
-                    setEditingGroup(null);
-                    setShowGroupModal(true);
+                    // setEditingGroup(null);
+                    // setShowGroupModal(true);
                   }}
                   className="flex items-center space-x-2 bg-slate-900 text-white px-4 py-2 rounded-lg hover:bg-slate-800 transition"
                 >
@@ -268,15 +268,15 @@ export default function Items() {
                       <div className="flex space-x-1">
                         <button
                           onClick={() => {
-                            setEditingGroup(group);
-                            setShowGroupModal(true);
+                            // setEditingGroup(group);
+                            // setShowGroupModal(true);
                           }}
                           className="p-1 text-slate-600 hover:text-slate-900"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleDeleteGroup(group.id)}
+                          // onClick={() => handleDeleteGroup(group.id)}
                           className="p-1 text-red-600 hover:text-red-700"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -298,8 +298,8 @@ export default function Items() {
                 <h2 className="text-xl font-bold text-slate-900">Items</h2>
                 <button
                   onClick={() => {
-                    setEditingItem(null);
-                    setShowItemModal(true);
+                    // setEditingItem(null);
+                    // setShowItemModal(true);
                   }}
                   className="flex items-center space-x-2 bg-slate-900 text-white px-4 py-2 rounded-lg hover:bg-slate-800 transition"
                 >
@@ -356,15 +356,15 @@ export default function Items() {
                             <div className="flex justify-end space-x-2">
                               <button
                                 onClick={() => {
-                                  setEditingItem(item);
-                                  setShowItemModal(true);
+                                  // setEditingItem(item);
+                                  // setShowItemModal(true);
                                 }}
                                 className="p-1 text-slate-600 hover:text-slate-900"
                               >
                                 <Edit2 className="w-4 h-4" />
                               </button>
                               <button
-                                onClick={() => handleDeleteItem(item.id)}
+                                // onClick={() => handleDeleteItem(item.id)}
                                 className="p-1 text-red-600 hover:text-red-700"
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -385,7 +385,7 @@ export default function Items() {
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold text-slate-900">Class-Group Assignments</h2>
                 <button
-                  onClick={() => setShowAssignmentModal(true)}
+                  // onClick={() => setShowAssignmentModal(true)}
                   className="flex items-center space-x-2 bg-slate-900 text-white px-4 py-2 rounded-lg hover:bg-slate-800 transition"
                 >
                   <LinkIcon className="w-5 h-5" />
@@ -414,7 +414,7 @@ export default function Items() {
                         </div>
                       </div>
                       <button
-                        onClick={() => handleDeleteAssignment(assignment.id)}
+                        // onClick={() => handleDeleteAssignment(assignment.id)}
                         className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded"
                       >
                         <Trash2 className="w-4 h-4" />
