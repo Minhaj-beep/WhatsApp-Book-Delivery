@@ -34,10 +34,10 @@ export default function Login() {
           </div>
 
           <h1 className="text-2xl font-bold text-center text-slate-900 mb-2">
-            School Ordering System
+            Academics Ordering System
           </h1>
           <p className="text-center text-slate-600 mb-8">
-            Sign in to manage orders and inventory
+            Sign in to manage orders
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-6">

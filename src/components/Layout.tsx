@@ -53,7 +53,7 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
                   <Package className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h1 className="font-bold text-slate-900">School Orders</h1>
+                  <h1 className="font-bold text-slate-900">Academics Orders</h1>
                   <p className="text-xs text-slate-500">Admin Panel</p>
                 </div>
               </div>

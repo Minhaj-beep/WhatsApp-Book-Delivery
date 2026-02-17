@@ -223,7 +223,7 @@ export default function Items() {
             {[
               { id: 'groups', label: 'Groups' },
               { id: 'items', label: 'Items' },
-              { id: 'assignments', label: 'Class Assignments' },
+              { id: 'assignments', label: 'Tag Groups' },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -315,7 +315,7 @@ export default function Items() {
                       <th className="text-left py-3 px-4 font-medium text-slate-700">Item</th>
                       <th className="text-left py-3 px-4 font-medium text-slate-700">Group</th>
                       <th className="text-left py-3 px-4 font-medium text-slate-700">Price</th>
-                      <th className="text-left py-3 px-4 font-medium text-slate-700">Stock</th>
+                      {/* <th className="text-left py-3 px-4 font-medium text-slate-700">Stock</th> */}
                       <th className="text-left py-3 px-4 font-medium text-slate-700">Weight/Dims</th>
                       <th className="text-left py-3 px-4 font-medium text-slate-700">Status</th>
                       <th className="text-right py-3 px-4 font-medium text-slate-700">Actions</th>
@@ -338,7 +338,7 @@ export default function Items() {
                           <td className="py-3 px-4 text-sm font-medium text-slate-900">
                             {formatCurrency(item.price_paise)}
                           </td>
-                          <td className="py-3 px-4 text-sm text-slate-600">{item.stock}</td>
+                          {/* <td className="py-3 px-4 text-sm text-slate-600">{item.stock}</td> */}
                           <td className="py-3 px-4 text-xs text-slate-600">
                             <div>{item.weight_grams}g</div>
                             {item.length_cm && item.width_cm && item.height_cm && (
@@ -389,7 +389,7 @@ export default function Items() {
                   className="flex items-center space-x-2 bg-slate-900 text-white px-4 py-2 rounded-lg hover:bg-slate-800 transition"
                 >
                   <LinkIcon className="w-5 h-5" />
-                  <span>Add Assignment</span>
+                  <span>Tag Group</span>
                 </button>
               </div>
 
@@ -552,7 +552,7 @@ export default function Items() {
                     className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent"
                   />
                 </div>
-                <div>
+                {/* <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
                     Stock
                   </label>
@@ -563,7 +563,7 @@ export default function Items() {
                     defaultValue={editingItem?.stock || 0}
                     className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent"
                   />
-                </div>
+                </div> */}
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-slate-700 mb-2">
                     Description
@@ -657,7 +657,7 @@ export default function Items() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
             <h2 className="text-2xl font-bold text-slate-900 mb-4">
-              Add Class-Group Assignment
+              Tag Group to Class
             </h2>
             <form
               onSubmit={(e) => {
