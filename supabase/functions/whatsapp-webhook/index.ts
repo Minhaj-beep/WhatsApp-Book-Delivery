@@ -17,12 +17,8 @@ const STATES = {
   PAYMENT_WAIT: "PAYMENT_WAIT",
 };
 
-/**
- * Send a WhatsApp text message using the WhatsApp Cloud API (Meta).
- * If environment variables are missing it logs a mock message (same behaviour as before).
- * This version logs status and response body for easier debugging.
- */
-async function sendWhatsAppMessage(phone: string, message: string) {
+/** Simple text sender */
+async function sendWhatsAppText(phone: string, message: string) {
   const token = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
   const phoneNumberId = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
 
@@ -32,25 +28,18 @@ async function sendWhatsAppMessage(phone: string, message: string) {
   }
 
   try {
-    // Meta expects plain E.164 without "whatsapp:" prefix for the "to" field
     const cleanPhone = phone.replace(/^whatsapp:/i, "").replace(/^\+/, "");
-
     const url = `https://graph.facebook.com/v17.0/${phoneNumberId}/messages`;
     const body = {
       messaging_product: "whatsapp",
       to: cleanPhone,
       type: "text",
-      text: {
-        body: message,
-      },
+      text: { body: message },
     };
 
     const res = await fetch(url, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
 
@@ -61,19 +50,132 @@ async function sendWhatsAppMessage(phone: string, message: string) {
     if (!res.ok) {
       console.error("WhatsApp Cloud API error. status:", res.status, "body:", parsed);
     } else {
-      console.log(`Message sent successfully to ${phone}. status: ${res.status} body:`, parsed);
+      console.log(`Message sent to ${phone}. status: ${res.status} body:`, parsed);
     }
   } catch (err) {
-    console.error("Error sending WhatsApp message:", err);
+    console.error("Error sending WhatsApp text:", err);
+  }
+}
+
+/**
+ * Button interactive sender (max 3 buttons).
+ * Automatically trims titles to 1..20 characters required by WhatsApp API.
+ */
+async function sendWhatsAppButtons(phone: string, bodyText: string, buttons: { id: string; title: string }[]) {
+  const token = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
+  const phoneNumberId = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
+
+  // sanitize titles to conform to WhatsApp limits
+  const sanitizedButtons = buttons.map((b) => {
+    let title = (b.title || "").toString();
+    if (title.length === 0) title = "Option";
+    if (title.length > 20) {
+      console.warn(`Trimming button title "${b.title}" to 20 chars`);
+      title = title.slice(0, 20);
+    }
+    return { id: b.id, title };
+  });
+
+  if (!token || !phoneNumberId) {
+    console.log(`[Mock-Buttons] ${phone}: ${bodyText} Buttons: ${JSON.stringify(sanitizedButtons)}`);
+    return;
+  }
+
+  try {
+    const cleanPhone = phone.replace(/^whatsapp:/i, "").replace(/^\+/, "");
+    const url = `https://graph.facebook.com/v17.0/${phoneNumberId}/messages`;
+    const payload = {
+      messaging_product: "whatsapp",
+      to: cleanPhone,
+      type: "interactive",
+      interactive: {
+        type: "button",
+        body: { text: bodyText },
+        action: {
+          buttons: sanitizedButtons.map((b) => ({
+            type: "reply",
+            reply: { id: b.id, title: b.title },
+          })),
+        },
+      },
+    };
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const text = await res.text();
+    let parsed;
+    try { parsed = JSON.parse(text); } catch (e) { parsed = text; }
+
+    if (!res.ok) {
+      console.error("WhatsApp Buttons API error. status:", res.status, "body:", parsed);
+    } else {
+      console.log(`Button message sent to ${phone}. status: ${res.status} body:`, parsed);
+    }
+  } catch (err) {
+    console.error("Error sending WhatsApp buttons:", err);
+  }
+}
+
+/** List interactive sender */
+async function sendWhatsAppList(phone: string, bodyText: string, buttonText: string, sectionTitle: string, rows: { id: string; title: string; description?: string }[]) {
+  const token = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
+  const phoneNumberId = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
+
+  if (!token || !phoneNumberId) {
+    console.log(`[Mock-List] ${phone}: ${bodyText} Rows: ${JSON.stringify(rows)}`);
+    return;
+  }
+
+  try {
+    const cleanPhone = phone.replace(/^whatsapp:/i, "").replace(/^\+/, "");
+    const url = `https://graph.facebook.com/v17.0/${phoneNumberId}/messages`;
+    const payload = {
+      messaging_product: "whatsapp",
+      to: cleanPhone,
+      type: "interactive",
+      interactive: {
+        type: "list",
+        body: { text: bodyText },
+        action: {
+          button: buttonText,
+          sections: [
+            {
+              title: sectionTitle,
+              rows: rows.map((r) => ({ id: r.id, title: r.title, description: r.description || "" })),
+            },
+          ],
+        },
+      },
+    };
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const text = await res.text();
+    let parsed;
+    try { parsed = JSON.parse(text); } catch (e) { parsed = text; }
+
+    if (!res.ok) {
+      console.error("WhatsApp List API error. status:", res.status, "body:", parsed);
+    } else {
+      console.log(`List message sent to ${phone}. status: ${res.status} body:`, parsed);
+    }
+  } catch (err) {
+    console.error("Error sending WhatsApp list:", err);
   }
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { status: 200, headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { status: 200, headers: corsHeaders });
 
-  // Webhook verification required by Meta (GET)
+  // webhook verify
   if (req.method === "GET") {
     try {
       const url = new URL(req.url);
@@ -98,21 +200,14 @@ Deno.serve(async (req: Request) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Determine content type and parse accordingly:
     const contentType = req.headers.get("content-type") || "";
-
-    // rawPayload will be saved to DB for audit/debugging
     let rawPayload: Record<string, any> = {};
 
-    // Extract 'body' text, 'from' phone, and 'messageSid'/id in a way that supports:
-    // - Meta Cloud API JSON payloads
-    // - (fallback) Twilio form-encoded payloads (to ease transition)
     let bodyText = "";
     let from = "";
     let messageSid = "";
 
     if (contentType.includes("application/json") || contentType.includes("application/ld+json")) {
-      // Meta Cloud API
       const payload = await req.json();
       rawPayload = payload;
 
@@ -121,11 +216,13 @@ Deno.serve(async (req: Request) => {
         payload?.entry?.[0]?.changes?.[0]?.value?.statuses?.[0];
 
       if (messageObj) {
-        // message text can be in messageObj.text.body or interactive/list_reply etc.
+        // Prefer interactive replies (id), then title, then text body
         bodyText =
-          messageObj?.text?.body ||
+          messageObj?.interactive?.button_reply?.id ||
+          messageObj?.interactive?.list_reply?.id ||
           messageObj?.interactive?.button_reply?.title ||
           messageObj?.interactive?.list_reply?.title ||
+          messageObj?.text?.body ||
           messageObj?.button?.text ||
           messageObj?.body ||
           "";
@@ -133,7 +230,6 @@ Deno.serve(async (req: Request) => {
         from = messageObj?.from || "";
         messageSid = messageObj?.id || "";
       } else {
-        // No message payload; might be a status or other change — log and return OK
         console.log("No message object found in JSON webhook; raw payload saved.");
         await supabase.from("whatsapp_messages").insert({
           phone: null,
@@ -144,7 +240,7 @@ Deno.serve(async (req: Request) => {
         return new Response("OK", { status: 200, headers: corsHeaders });
       }
     } else {
-      // Fallback: parse formData (Twilio-style). This preserves behavior while you switch.
+      // fallback (Twilio style)
       const formData = await req.formData();
       for (const [k, v] of formData.entries()) rawPayload[k] = v;
       bodyText = formData.get("Body")?.toString() || "";
@@ -155,7 +251,6 @@ Deno.serve(async (req: Request) => {
     const body = bodyText.trim();
     if (!from || !body) {
       console.log("Missing 'from' or 'body' in incoming webhook. Raw payload:", rawPayload);
-      // Log the raw payload for debugging, still respond OK
       await supabase.from("whatsapp_messages").insert({
         phone: from || null,
         direction: "in",
@@ -165,13 +260,12 @@ Deno.serve(async (req: Request) => {
       return new Response("OK", { status: 200, headers: corsHeaders });
     }
 
-    // Normalize phone (Meta gives E.164 without whatsapp: prefix; Twilio may include "whatsapp:")
     const phone = from.replace(/^whatsapp:/i, "").replace(/^\+/, "");
-    const normalizedPhone = phone; // keep as string for DB (no leading +)
+    const normalizedPhone = phone;
 
     console.log("Received data:", { body, from, messageSid });
 
-    // log incoming message to DB (helpful for audits)
+    // log incoming message
     await supabase.from("whatsapp_messages").insert({
       phone: normalizedPhone,
       direction: "in",
@@ -179,18 +273,16 @@ Deno.serve(async (req: Request) => {
       raw_payload: rawPayload,
     });
 
-    // load conversation (if any)
+    // load conversation
     let { data: conversation } = await supabase
       .from("whatsapp_conversations")
       .select("*")
       .eq("phone", normalizedPhone)
       .maybeSingle();
 
-    // default state/context
     let state = conversation?.state || STATES.AWAIT_CODE;
     let context = conversation?.context || {};
 
-    // helper: merge-and-save context and update local conversation copy
     async function saveState(newState: string, newContext: Record<string, any>) {
       const merged = { ...(conversation?.context || {}), ...(newContext || {}) };
       const upsertBody = {
@@ -200,46 +292,63 @@ Deno.serve(async (req: Request) => {
         last_message_at: new Date().toISOString(),
       };
       await supabase.from("whatsapp_conversations").upsert(upsertBody);
-      // keep local copy for subsequent merges in this request
       conversation = { ...(conversation || {}), ...upsertBody };
       state = newState;
       context = merged;
       return merged;
     }
 
-    // Recognize START to reset conversation at any time
-    if (body.toUpperCase() === "START") {
+    // restart anywhere
+    if (body.toUpperCase() === "START" || body === "restart") {
       await supabase.from("whatsapp_conversations").delete().eq("phone", normalizedPhone);
-      await sendWhatsAppMessage(normalizedPhone, "Welcome — send your 4-digit school code to begin ordering.");
+      await sendWhatsAppText(normalizedPhone, "Welcome — send your 4-digit school code to begin ordering.");
       return new Response("OK", { status: 200, headers: corsHeaders });
     }
 
-    // -------------- STATE MACHINE --------------
+    // ---------- STATE MACHINE ----------
 
     // AWAIT_CODE
     if (state === STATES.AWAIT_CODE) {
       if (!/^\d{4}$/.test(body)) {
-        await sendWhatsAppMessage(normalizedPhone, "Please send your 4-digit school code to start ordering.");
+        await sendWhatsAppText(normalizedPhone, "Please send your 4-digit school code to start ordering.");
         return new Response("OK", { status: 200, headers: corsHeaders });
       }
 
-      const { data: school } = await supabase
-        .from("schools")
-        .select("id, name, code_4digit, active")
-        .eq("code_4digit", body)
-        .eq("active", true)
-        .maybeSingle();
+      // fetch school (defensive)
+      let school;
+      try {
+        const { data } = await supabase
+          .from("schools")
+          .select("id, name, code_4digit, active")
+          .eq("code_4digit", body)
+          .eq("active", true)
+          .maybeSingle();
+        school = data;
+      } catch (err) {
+        console.error("DB error fetching school:", err);
+        await sendWhatsAppText(normalizedPhone, "Server error looking up school. Please try again later.");
+        return new Response("OK", { status: 200, headers: corsHeaders });
+      }
 
       if (!school) {
-        await sendWhatsAppMessage(normalizedPhone, "❌ Invalid school code. Please check and try again.");
+        await sendWhatsAppText(normalizedPhone, "❌ Invalid school code. Please check and try again.");
         return new Response("OK", { status: 200, headers: corsHeaders });
       }
 
-      const { data: classes } = await supabase
-        .from("classes")
-        .select("id, name")
-        .eq("school_id", school.id)
-        .order("sort_order");
+      // fetch classes
+      let classes;
+      try {
+        const { data } = await supabase
+          .from("classes")
+          .select("id, name")
+          .eq("school_id", school.id)
+          .order("sort_order");
+        classes = data || [];
+      } catch (err) {
+        console.error("DB error fetching classes:", err);
+        await sendWhatsAppText(normalizedPhone, "Server error fetching classes. Please try later.");
+        return new Response("OK", { status: 200, headers: corsHeaders });
+      }
 
       const newCtx = {
         school_id: school.id,
@@ -250,96 +359,171 @@ Deno.serve(async (req: Request) => {
       };
       await saveState(STATES.AWAIT_CLASS, newCtx);
 
-      const classList = (classes || []).map((c: any, i: number) => `${i + 1}. ${c.name}`).join("\n") || "No classes found.";
-      await sendWhatsAppMessage(normalizedPhone, `✅ Code accepted for ${school.name}.\n\nSelect your class:\n${classList}\n\nReply with the number.`);
+      // build list rows (and restart)
+      const classRows = (classes || []).map((c: any) => ({ id: `class_${c.id}`, title: c.name }));
+      classRows.push({ id: "restart", title: "Restart" });
+
+      await sendWhatsAppList(
+        normalizedPhone,
+        `✅ Code accepted for ${school.name}.\nSelect your class:`,
+        "View classes",
+        "Classes",
+        classRows
+      );
+
       return new Response("OK", { status: 200, headers: corsHeaders });
     }
 
     // AWAIT_CLASS
     if (state === STATES.AWAIT_CLASS) {
-      const idx = parseInt(body, 10) - 1;
-      if (!Array.isArray(context.classes) || isNaN(idx) || idx < 0 || idx >= context.classes.length) {
-        await sendWhatsAppMessage(normalizedPhone, "Invalid selection. Please reply with the class number from the list.");
+      let chosenClass = null;
+
+      if (body.startsWith("class_")) {
+        const classId = body.split("_")[1];
+        chosenClass = (context.classes || []).find((c: any) => String(c.id) === String(classId));
+      } else {
+        const idx = parseInt(body, 10) - 1;
+        if (Array.isArray(context.classes) && !isNaN(idx) && idx >= 0 && idx < context.classes.length) {
+          chosenClass = context.classes[idx];
+        }
+      }
+
+      if (!chosenClass) {
+        if (body === "restart") {
+          await supabase.from("whatsapp_conversations").delete().eq("phone", normalizedPhone);
+          await sendWhatsAppText(normalizedPhone, "Restarted. Send your 4-digit school code to begin ordering.");
+          return new Response("OK", { status: 200, headers: corsHeaders });
+        }
+        await sendWhatsAppText(normalizedPhone, "Invalid selection. Please select your class from the list (or type START).");
         return new Response("OK", { status: 200, headers: corsHeaders });
       }
 
-      const chosen = context.classes[idx];
-      const newCtx = {
-        class_id: chosen.id,
-        class_name: chosen.name,
-      };
-      await saveState(STATES.AWAIT_CATEGORY, newCtx);
+      await saveState(STATES.AWAIT_CATEGORY, { class_id: chosenClass.id, class_name: chosenClass.name });
 
-      await sendWhatsAppMessage(normalizedPhone, "What would you like to order?\n\n1. Books\n2. Stationery\n\nReply with 1 or 2.");
+      await sendWhatsAppButtons(normalizedPhone, "What would you like to order?", [
+        { id: "cat_books", title: "Books" },
+        { id: "cat_stationery", title: "Stationery" },
+        { id: "restart", title: "Restart" },
+      ]);
+
       return new Response("OK", { status: 200, headers: corsHeaders });
     }
 
     // AWAIT_CATEGORY
     if (state === STATES.AWAIT_CATEGORY) {
-      if (body !== "1" && body !== "2") {
-        await sendWhatsAppMessage(normalizedPhone, "Please reply with 1 for Books or 2 for Stationery.");
+      if (body === "restart") {
+        await supabase.from("whatsapp_conversations").delete().eq("phone", normalizedPhone);
+        await sendWhatsAppText(normalizedPhone, "Restarted. Send your 4-digit school code to begin ordering.");
         return new Response("OK", { status: 200, headers: corsHeaders });
       }
 
-      const category = body === "1" ? "books" : "stationery";
+      let category = "";
+      if (body === "cat_books" || body.toLowerCase() === "books" || body === "1") category = "books";
+      else if (body === "cat_stationery" || body.toLowerCase() === "stationery" || body === "2") category = "stationery";
+      else {
+        await sendWhatsAppText(normalizedPhone, "Please choose Books or Stationery (use the buttons).");
+        return new Response("OK", { status: 200, headers: corsHeaders });
+      }
 
-      // find groups of that type, then filter by class assignment
-      const { data: groups } = await supabase
-        .from("groups")
-        .select("id, name")
-        .eq("type", category);
+      // fetch groups assigned to class and items — defensive try/catch
+      let groups;
+      try {
+        const { data } = await supabase.from("groups").select("id, name").eq("type", category);
+        groups = data || [];
+      } catch (err) {
+        console.error("DB error fetching groups:", err);
+        await sendWhatsAppText(normalizedPhone, "Server error. Please try again later.");
+        return new Response("OK", { status: 200, headers: corsHeaders });
+      }
 
-      const { data: assignments } = await supabase
-        .from("class_group_assignments")
-        .select("group_id")
-        .eq("class_id", context.class_id);
+      let assignments;
+      try {
+        const { data } = await supabase
+          .from("class_group_assignments")
+          .select("group_id")
+          .eq("class_id", context.class_id);
+        assignments = data || [];
+      } catch (err) {
+        console.error("DB error fetching assignments:", err);
+        await sendWhatsAppText(normalizedPhone, "Server error. Please try again later.");
+        return new Response("OK", { status: 200, headers: corsHeaders });
+      }
 
       const assignedIds = (assignments || []).map((a: any) => a.group_id);
       const availableGroups = (groups || []).filter((g: any) => assignedIds.includes(g.id));
-
       if (!availableGroups.length) {
-        await sendWhatsAppMessage(normalizedPhone, "No items available for your class/category. Please contact support.");
+        await sendWhatsAppText(normalizedPhone, "No items available for your class/category. Please contact support.");
         return new Response("OK", { status: 200, headers: corsHeaders });
       }
 
       const groupId = availableGroups[0].id;
 
-      const { data: items } = await supabase
-        .from("items")
-        .select("id, title, price_paise, stock, active")
-        .eq("group_id", groupId)
-        .eq("active", true);
+      let items;
+      try {
+        const { data } = await supabase
+          .from("items")
+          .select("id, title, price_paise, stock, active")
+          .eq("group_id", groupId)
+          .eq("active", true);
+        items = data || [];
+      } catch (err) {
+        console.error("DB error fetching items:", err);
+        await sendWhatsAppText(normalizedPhone, "Server error fetching items. Please try again later.");
+        return new Response("OK", { status: 200, headers: corsHeaders });
+      }
 
-      const newCtx = {
-        category,
-        items: items || [],
-        selected_items: [],
-      };
-      await saveState(STATES.AWAIT_DELIVERY, newCtx);
+      await saveState(STATES.AWAIT_DELIVERY, { category, items, selected_items: [] });
 
-      // preview items (first 5)
-      const preview = (items || []).slice(0, 5).map((it: any, i: number) => `${i + 1}. ${it.title} — ₹${(it.price_paise/100).toFixed(2)}`).join("\n");
-      await sendWhatsAppMessage(normalizedPhone, `Available items:\n${preview}\n\nChoose delivery:\n1. School Delivery - ₹50\n2. Home Delivery - ₹150\n\nReply with 1 or 2.`);
+      // prepare preview text (with prices and showing delivery charges)
+      const preview = (items || []).slice(0, 10).map((it: any, i: number) =>
+        `${i + 1}. ${it.title} — ₹${(it.price_paise / 100).toFixed(2)}`
+      ).join("\n") || "No items found.";
+
+      // send available items preview (plain text)
+      await sendWhatsAppText(normalizedPhone, `Available items:\n${preview}`);
+
+      // send delivery cost info as plain text as well (so customers always see price)
+      await sendWhatsAppText(normalizedPhone, `Choose delivery:\n\nSchool Delivery - ₹50\nHome Delivery - ₹150\n\nBelow are quick buttons to choose:`);
+
+      // then send short buttons (titles <= 20 chars)
+      await sendWhatsAppButtons(normalizedPhone, "Select delivery option:", [
+        { id: "delivery_school", title: "School Delivery" },
+        { id: "delivery_home", title: "Home Delivery" },
+        { id: "restart", title: "Restart" },
+      ]);
+
       return new Response("OK", { status: 200, headers: corsHeaders });
     }
 
     // AWAIT_DELIVERY
     if (state === STATES.AWAIT_DELIVERY) {
-      if (body !== "1" && body !== "2") {
-        await sendWhatsAppMessage(normalizedPhone, "Please reply with 1 for School delivery or 2 for Home delivery.");
+      if (body === "restart") {
+        await supabase.from("whatsapp_conversations").delete().eq("phone", normalizedPhone);
+        await sendWhatsAppText(normalizedPhone, "Restarted. Send your 4-digit school code to begin ordering.");
         return new Response("OK", { status: 200, headers: corsHeaders });
       }
 
-      const delivery_type = body === "1" ? "school" : "home";
-      const newCtx = { delivery_type };
-      const nextState = delivery_type === "home" ? STATES.AWAIT_ADDRESS : STATES.AWAIT_CONFIRM;
+      if (body !== "delivery_school" && body !== "delivery_home" && body !== "1" && body !== "2") {
+        await sendWhatsAppText(normalizedPhone, "Please use the delivery buttons (School Delivery or Home Delivery) or type START to restart.");
+        return new Response("OK", { status: 200, headers: corsHeaders });
+      }
 
-      await saveState(nextState, newCtx);
+      const delivery_type = (body === "delivery_school" || body === "1") ? "school" : "home";
+      await saveState(delivery_type === "home" ? STATES.AWAIT_ADDRESS : STATES.AWAIT_CONFIRM, { delivery_type });
 
       if (delivery_type === "home") {
-        await sendWhatsAppMessage(normalizedPhone, "Please send your complete delivery address.");
+        // ask user to type only the address
+        await sendWhatsAppText(normalizedPhone, "Please send your complete delivery address (type the full address only).");
+        // also give restart button if they changed their mind
+        await sendWhatsAppButtons(normalizedPhone, "If you'd like to restart instead, press below:", [
+          { id: "restart", title: "Restart" },
+        ]);
       } else {
-        await sendWhatsAppMessage(normalizedPhone, "Type CONFIRM to place your order.");
+        // school delivery — confirm button
+        await sendWhatsAppButtons(normalizedPhone, "You're choosing School Delivery. Tap Confirm to place your order.", [
+          { id: "confirm", title: "Confirm" },
+          { id: "restart", title: "Restart" },
+        ]);
       }
 
       return new Response("OK", { status: 200, headers: corsHeaders });
@@ -347,37 +531,49 @@ Deno.serve(async (req: Request) => {
 
     // AWAIT_ADDRESS
     if (state === STATES.AWAIT_ADDRESS) {
-      // simple address capture
-      await saveState(STATES.AWAIT_CONFIRM, { address: body });
-      await sendWhatsAppMessage(normalizedPhone, "Type CONFIRM to place your order.");
+      if (body === "restart") {
+        await supabase.from("whatsapp_conversations").delete().eq("phone", normalizedPhone);
+        await sendWhatsAppText(normalizedPhone, "Restarted. Send your 4-digit school code to begin ordering.");
+        return new Response("OK", { status: 200, headers: corsHeaders });
+      }
+
+      // address must be free text
+      const address = body;
+      await saveState(STATES.AWAIT_CONFIRM, { address });
+      await sendWhatsAppButtons(normalizedPhone, `Address received:\n${address}\n\nTap Confirm to place your order.`, [
+        { id: "confirm", title: "Confirm" },
+        { id: "restart", title: "Restart" },
+      ]);
       return new Response("OK", { status: 200, headers: corsHeaders });
     }
 
     // AWAIT_CONFIRM
     if (state === STATES.AWAIT_CONFIRM) {
-      if (body.toUpperCase() !== "CONFIRM") {
-        await sendWhatsAppMessage(normalizedPhone, "Type CONFIRM to place your order, or START to begin a new order.");
+      if (body === "restart") {
+        await supabase.from("whatsapp_conversations").delete().eq("phone", normalizedPhone);
+        await sendWhatsAppText(normalizedPhone, "Restarted. Send your 4-digit school code to begin ordering.");
         return new Response("OK", { status: 200, headers: corsHeaders });
       }
 
-      // guard
+      if (!(body === "confirm" || body.toUpperCase() === "CONFIRM")) {
+        await sendWhatsAppText(normalizedPhone, "Tap Confirm to place your order, or press Restart to start over.");
+        return new Response("OK", { status: 200, headers: corsHeaders });
+      }
+
       if (!context.school_code) {
         console.error("Missing school_code in context:", context);
-        await sendWhatsAppMessage(normalizedPhone, "Something went wrong. Please type START and try again.");
+        await sendWhatsAppText(normalizedPhone, "Something went wrong. Please type START and try again.");
         return new Response("OK", { status: 200, headers: corsHeaders });
       }
 
-      // Prepare order items (default: first up to 3 items with qty=1)
       const safeItems = (context.items || []).slice(0, 3).map((it: any) => ({ item_id: it.id, qty: 1 }));
-
       if (!safeItems.length) {
-        await sendWhatsAppMessage(normalizedPhone, "No items available to order. Please contact support.");
+        await sendWhatsAppText(normalizedPhone, "No items available to order. Please contact support.");
         return new Response("OK", { status: 200, headers: corsHeaders });
       }
 
       console.log("Creating order with school_code:", context.school_code);
 
-      // call create-order function (should be deployed with --no-verify-jwt)
       const createOrderUrl = `${supabaseUrl}/functions/v1/create-order`;
       const orderRes = await fetch(createOrderUrl, {
         method: "POST",
@@ -397,26 +593,22 @@ Deno.serve(async (req: Request) => {
       if (!orderRes.ok) {
         const errorText = await orderRes.text();
         console.error("Create-order failed:", errorText);
-        // return friendly message but include the server error to help debugging
-        await sendWhatsAppMessage(normalizedPhone, `Order failed: ${errorText}`);
+        await sendWhatsAppText(normalizedPhone, `Order failed: ${errorText}`);
         return new Response("OK", { status: 200, headers: corsHeaders });
       }
 
       const orderData = await orderRes.json();
-
-      // success: notify user + remove conversation
       const amount = (orderData.total_amount_paise / 100).toFixed(2);
       const paymentMsg = orderData.payment_link ? `Payment link: ${orderData.payment_link}` : "Payment link will be sent shortly.";
 
-      await sendWhatsAppMessage(normalizedPhone, `✅ Order #${orderData.order_id} created!\nTotal: ₹${amount}\n${paymentMsg}`);
+      await sendWhatsAppText(normalizedPhone, `✅ Order #${orderData.order_id} created!\nTotal: ₹${amount}\n${paymentMsg}`);
 
       await supabase.from("whatsapp_conversations").delete().eq("phone", normalizedPhone);
-
       return new Response("OK", { status: 200, headers: corsHeaders });
     }
 
-    // Fallback — unknown state
-    await sendWhatsAppMessage(normalizedPhone, "Something unexpected happened. Please type START to begin again.");
+    // fallback
+    await sendWhatsAppText(normalizedPhone, "Something unexpected happened. Please type START to begin again.");
     return new Response("OK", { status: 200, headers: corsHeaders });
   } catch (error) {
     console.error("Error processing WhatsApp webhook:", error);
