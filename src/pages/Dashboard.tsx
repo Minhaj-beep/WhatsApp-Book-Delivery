@@ -36,8 +36,6 @@ export default function Dashboard() {
         new Date(o.created_at) >= today
       ) || [];
 
-      console.log(orders)
-
       setStats({
         pending_payments: orders?.filter(o => o.payment_status === 'pending').length || 0,
         confirmed_orders: orders?.filter(o => o.status === 'confirmed').length || 0,
@@ -55,12 +53,12 @@ export default function Dashboard() {
   }
 
   const statCards = [
-    // {
-    //   title: 'Pending Payments',
-    //   value: stats.pending_payments,
-    //   icon: AlertCircle,
-    //   color: 'bg-yellow-500',
-    // },
+    {
+      title: 'Pending Payments',
+      value: stats.pending_payments,
+      icon: AlertCircle,
+      color: 'bg-yellow-500',
+    },
     {
       title: 'Orders to Pack',
       value: stats.confirmed_orders,
@@ -103,7 +101,7 @@ export default function Dashboard() {
         <p className="text-slate-600 mt-1">Overview of your ordering system</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {statCards.map((card) => {
           const Icon = card.icon;
           return (
@@ -121,7 +119,7 @@ export default function Dashboard() {
       </div>
 
       <div className="space-y-6">
-        {/* <WhatsAppChatsReport /> */}
+        <WhatsAppChatsReport />
         <OrderAnalyticsReport />
         <SchoolPerformanceReport />
       </div>

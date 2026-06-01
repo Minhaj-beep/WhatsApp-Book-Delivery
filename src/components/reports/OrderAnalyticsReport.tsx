@@ -124,56 +124,34 @@ export default function OrderAnalyticsReport() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-1 gap-6 mb-6">
-  
-        {/* Orders by Status */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <div>
-          <h3 className="text-sm font-semibold text-slate-600 mb-3">
-            Orders by Status
-          </h3>
-
-          <div className="flex flex-wrap gap-3">
+          <h3 className="text-sm font-semibold text-slate-600 mb-3">Orders by Status</h3>
+          <div className="space-y-2">
             {stats.ordersByStatus.map(({ status, count }) => (
-              <div
-                key={status}
-                className="flex items-center justify-between px-4 py-2 bg-slate-50 rounded-lg min-w-[140px] hover:bg-slate-100 transition"
-              >
+              <div key={status} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                 <span className="text-sm font-medium text-slate-700 capitalize">
-                  {status.replace("_", " ")}
+                  {status.replace('_', ' ')}
                 </span>
-
-                <span className="text-sm font-bold text-slate-900 ml-3">
-                  {count}
-                </span>
+                <span className="text-sm font-bold text-slate-900">{count}</span>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Payment Status */}
-        {/* <div>
-          <h3 className="text-sm font-semibold text-slate-600 mb-3">
-            Payment Status
-          </h3>
-
-          <div className="flex flex-wrap gap-3">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-600 mb-3">Payment Status</h3>
+          <div className="space-y-2">
             {stats.ordersByPayment.map(({ payment_status, count }) => (
-              <div
-                key={payment_status}
-                className="flex items-center justify-between px-4 py-2 bg-slate-50 rounded-lg min-w-[140px] hover:bg-slate-100 transition"
-              >
+              <div key={payment_status} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                 <span className="text-sm font-medium text-slate-700 capitalize">
                   {payment_status}
                 </span>
-
-                <span className="text-sm font-bold text-slate-900 ml-3">
-                  {count}
-                </span>
+                <span className="text-sm font-bold text-slate-900">{count}</span>
               </div>
             ))}
           </div>
-        </div> */}
-
+        </div>
       </div>
 
       <div>
@@ -192,7 +170,7 @@ export default function OrderAnalyticsReport() {
             <tbody className="divide-y divide-slate-200">
               {stats.recentOrders.map((order) => (
                 <tr key={order.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 text-sm text-slate-900">#{order.id.toString().slice(0, 8)}</td>
+                  <td className="px-4 py-3 text-sm text-slate-900">#{order.id.slice(0, 8)}</td>
                   <td className="px-4 py-3 text-sm text-slate-900">{order.schools?.name || 'N/A'}</td>
                   <td className="px-4 py-3 text-sm text-slate-900">
                     {formatCurrency(order.total_amount_paise)}

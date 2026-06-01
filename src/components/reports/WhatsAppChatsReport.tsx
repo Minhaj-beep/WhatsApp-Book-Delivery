@@ -7,7 +7,7 @@ interface WhatsAppMessage {
   phone: string;
   direction: 'in' | 'out';
   raw_payload: any;
-  ts: string;
+  created_at: string;
 }
 
 interface ConversationGroup {
@@ -31,7 +31,7 @@ export default function WhatsAppChatsReport() {
       const { data: messages, error } = await supabase
         .from('whatsapp_messages')
         .select('*')
-        .order('ts', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
 
@@ -53,7 +53,7 @@ export default function WhatsAppChatsReport() {
           phone,
           messages: msgs,
           lastMessage: messageText,
-          lastMessageTime: latest.ts,
+          lastMessageTime: latest.created_at,
         };
       });
 
@@ -143,7 +143,7 @@ export default function WhatsAppChatsReport() {
                         </span>
                         <div className="flex items-center gap-1 text-xs text-slate-500">
                           <Clock className="w-3 h-3" />
-                          {new Date(msg.ts).toLocaleTimeString()}
+                          {new Date(msg.created_at).toLocaleTimeString()}
                         </div>
                       </div>
                       <p className="text-sm text-slate-900">

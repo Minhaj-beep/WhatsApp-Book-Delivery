@@ -10,7 +10,6 @@ export interface School {
   id: number;
   name: string;
   code_4digit: string;
-  zipcode: string | null;
   address: string | null;
   contact_phone: string | null;
   active: boolean;
@@ -63,7 +62,6 @@ export interface Order {
   parent_phone: string;
   parent_name: string | null;
   delivery_type: DeliveryType;
-  zipcode: string | null;
   delivery_address: string | null;
   delivery_charge_paise: number;
   items_total_paise: number;
