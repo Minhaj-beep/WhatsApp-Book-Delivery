@@ -1,0 +1,894 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Jyoti Stores – School Books &amp; Stationery Ordering via WhatsApp</title>
+    <meta name="description" content="Jyoti Stores makes it effortless for parents to order school books and stationery directly on WhatsApp. No apps. No logins. Just a simple chat." />
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      :root {
+        --green: #16a34a;
+        --green-dark: #15803d;
+        --green-light: #dcfce7;
+        --green-mid: #4ade80;
+        --slate-900: #0f172a;
+        --slate-800: #1e293b;
+        --slate-600: #475569;
+        --slate-400: #94a3b8;
+        --slate-200: #e2e8f0;
+        --slate-100: #f1f5f9;
+        --slate-50: #f8fafc;
+        --white: #ffffff;
+      }
+
+      html { scroll-behavior: smooth; }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        background: var(--white);
+        color: var(--slate-900);
+        line-height: 1.6;
+        font-size: 16px;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      a { text-decoration: none; color: inherit; }
+
+      /* ── Nav ── */
+      nav {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: rgba(255,255,255,0.95);
+        backdrop-filter: blur(8px);
+        border-bottom: 1px solid var(--slate-200);
+        padding: 0 24px;
+      }
+      .nav-inner {
+        max-width: 1100px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 64px;
+      }
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 800;
+        font-size: 1.3rem;
+        color: var(--slate-900);
+      }
+      .logo-icon {
+        width: 36px;
+        height: 36px;
+        background: var(--green);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .logo-icon svg { width: 20px; height: 20px; fill: white; }
+      .nav-links { display: flex; gap: 32px; align-items: center; }
+      .nav-links a {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: var(--slate-600);
+        transition: color 0.15s;
+      }
+      .nav-links a:hover { color: var(--slate-900); }
+      .nav-cta {
+        background: var(--green);
+        color: white !important;
+        padding: 8px 20px;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: background 0.15s !important;
+      }
+      .nav-cta:hover { background: var(--green-dark) !important; }
+
+      /* ── Hero ── */
+      .hero {
+        background: linear-gradient(135deg, var(--slate-900) 0%, #1a2f1a 100%);
+        color: white;
+        padding: 100px 24px 90px;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+      }
+      .hero::before {
+        content: '';
+        position: absolute;
+        top: -40%;
+        left: -20%;
+        width: 70%;
+        height: 160%;
+        background: radial-gradient(ellipse, rgba(22,163,74,0.18) 0%, transparent 70%);
+        pointer-events: none;
+      }
+      .hero::after {
+        content: '';
+        position: absolute;
+        bottom: -30%;
+        right: -10%;
+        width: 60%;
+        height: 140%;
+        background: radial-gradient(ellipse, rgba(74,222,128,0.10) 0%, transparent 70%);
+        pointer-events: none;
+      }
+      .hero-inner { max-width: 780px; margin: 0 auto; position: relative; z-index: 1; }
+      .hero-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(22,163,74,0.2);
+        border: 1px solid rgba(74,222,128,0.35);
+        color: var(--green-mid);
+        padding: 6px 16px;
+        border-radius: 100px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        margin-bottom: 28px;
+      }
+      .hero-badge-dot {
+        width: 6px;
+        height: 6px;
+        background: var(--green-mid);
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+      }
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.4; }
+      }
+      .hero h1 {
+        font-size: clamp(2.2rem, 5vw, 3.6rem);
+        font-weight: 800;
+        line-height: 1.15;
+        margin-bottom: 22px;
+        letter-spacing: -0.02em;
+      }
+      .hero h1 span { color: var(--green-mid); }
+      .hero p {
+        font-size: clamp(1rem, 2vw, 1.2rem);
+        color: rgba(255,255,255,0.72);
+        max-width: 600px;
+        margin: 0 auto 40px;
+        line-height: 1.7;
+      }
+      .hero-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+      .btn-primary {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: var(--green);
+        color: white;
+        padding: 14px 28px;
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: 0.95rem;
+        transition: background 0.15s, transform 0.1s;
+      }
+      .btn-primary:hover { background: var(--green-dark); transform: translateY(-1px); }
+      .btn-secondary {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.2);
+        color: white;
+        padding: 14px 28px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        transition: background 0.15s;
+      }
+      .btn-secondary:hover { background: rgba(255,255,255,0.18); }
+
+      /* ── Logos strip ── */
+      .partners {
+        background: var(--slate-100);
+        padding: 28px 24px;
+        border-bottom: 1px solid var(--slate-200);
+      }
+      .partners-inner {
+        max-width: 1100px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        gap: 40px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .partners-label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--slate-400);
+        white-space: nowrap;
+      }
+      .partner-pill {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: white;
+        border: 1px solid var(--slate-200);
+        padding: 8px 18px;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--slate-600);
+      }
+      .partner-pill svg { width: 18px; height: 18px; }
+
+      /* ── Section base ── */
+      section { padding: 88px 24px; }
+      .section-inner { max-width: 1100px; margin: 0 auto; }
+      .section-label {
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--green);
+        margin-bottom: 14px;
+      }
+      .section-heading {
+        font-size: clamp(1.7rem, 3.5vw, 2.5rem);
+        font-weight: 800;
+        line-height: 1.2;
+        letter-spacing: -0.02em;
+        margin-bottom: 16px;
+      }
+      .section-sub {
+        font-size: 1.05rem;
+        color: var(--slate-600);
+        max-width: 560px;
+        line-height: 1.75;
+      }
+
+      /* ── How it works ── */
+      .how { background: var(--white); }
+      .steps {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 32px;
+        margin-top: 56px;
+      }
+      .step {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        position: relative;
+      }
+      .step-num {
+        width: 48px;
+        height: 48px;
+        background: var(--green-light);
+        color: var(--green-dark);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 1.1rem;
+      }
+      .step h3 { font-size: 1.05rem; font-weight: 700; }
+      .step p { font-size: 0.9rem; color: var(--slate-600); line-height: 1.65; }
+
+      /* ── Features grid ── */
+      .features { background: var(--slate-50); }
+      .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 24px;
+        margin-top: 56px;
+      }
+      .feature-card {
+        background: white;
+        border: 1px solid var(--slate-200);
+        border-radius: 16px;
+        padding: 28px;
+        transition: box-shadow 0.2s, transform 0.2s;
+      }
+      .feature-card:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.08); transform: translateY(-2px); }
+      .feature-icon {
+        width: 44px;
+        height: 44px;
+        background: var(--green-light);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 16px;
+      }
+      .feature-icon svg { width: 22px; height: 22px; stroke: var(--green-dark); }
+      .feature-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 8px; }
+      .feature-card p { font-size: 0.875rem; color: var(--slate-600); line-height: 1.65; }
+
+      /* ── For schools ── */
+      .for-schools { background: var(--white); }
+      .for-schools-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 64px;
+        align-items: center;
+        margin-top: 56px;
+      }
+      @media (max-width: 768px) {
+        .for-schools-grid { grid-template-columns: 1fr; gap: 40px; }
+        .nav-links { display: none; }
+      }
+      .schools-list { display: flex; flex-direction: column; gap: 20px; }
+      .schools-list-item { display: flex; gap: 14px; align-items: flex-start; }
+      .check-circle {
+        flex-shrink: 0;
+        width: 24px;
+        height: 24px;
+        background: var(--green-light);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 2px;
+      }
+      .check-circle svg { width: 13px; height: 13px; stroke: var(--green-dark); stroke-width: 2.5; }
+      .schools-list-item h4 { font-size: 0.95rem; font-weight: 700; margin-bottom: 4px; }
+      .schools-list-item p { font-size: 0.875rem; color: var(--slate-600); line-height: 1.6; }
+      .schools-visual {
+        background: linear-gradient(135deg, var(--slate-900) 0%, #1a2f1a 100%);
+        border-radius: 20px;
+        padding: 40px;
+        color: white;
+        min-height: 360px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .chat-bubble-wrap { display: flex; flex-direction: column; gap: 12px; }
+      .chat-row { display: flex; align-items: flex-end; gap: 8px; }
+      .chat-row.right { flex-direction: row-reverse; }
+      .chat-avatar {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+        font-weight: 700;
+      }
+      .chat-avatar.green { background: var(--green); }
+      .chat-avatar.slate { background: var(--slate-600); }
+      .bubble {
+        max-width: 70%;
+        padding: 10px 14px;
+        border-radius: 14px;
+        font-size: 0.8rem;
+        line-height: 1.5;
+      }
+      .bubble.received {
+        background: rgba(255,255,255,0.12);
+        color: rgba(255,255,255,0.9);
+        border-bottom-left-radius: 4px;
+      }
+      .bubble.sent {
+        background: var(--green);
+        color: white;
+        border-bottom-right-radius: 4px;
+      }
+      .bubble .time { font-size: 0.65rem; opacity: 0.6; margin-top: 4px; }
+      .schools-visual-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        opacity: 0.5;
+        margin-top: 20px;
+      }
+
+      /* ── Stats ── */
+      .stats-band {
+        background: var(--slate-900);
+        color: white;
+        padding: 64px 24px;
+        text-align: center;
+      }
+      .stats-grid {
+        max-width: 900px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 40px;
+      }
+      .stat-item h2 {
+        font-size: 2.6rem;
+        font-weight: 800;
+        color: var(--green-mid);
+        letter-spacing: -0.03em;
+      }
+      .stat-item p { font-size: 0.875rem; color: rgba(255,255,255,0.6); margin-top: 6px; }
+
+      /* ── Testimonial ── */
+      .testimonials { background: var(--slate-50); }
+      .testimonial-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 24px;
+        margin-top: 56px;
+      }
+      .testimonial-card {
+        background: white;
+        border: 1px solid var(--slate-200);
+        border-radius: 16px;
+        padding: 28px;
+      }
+      .stars { color: #f59e0b; margin-bottom: 14px; font-size: 1rem; letter-spacing: 2px; }
+      .testimonial-card blockquote {
+        font-size: 0.9rem;
+        color: var(--slate-800);
+        line-height: 1.7;
+        margin-bottom: 20px;
+        font-style: italic;
+      }
+      .testimonial-author { display: flex; align-items: center; gap: 12px; }
+      .author-avatar {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        background: var(--green-light);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.85rem;
+        color: var(--green-dark);
+        flex-shrink: 0;
+      }
+      .author-name { font-size: 0.875rem; font-weight: 700; }
+      .author-role { font-size: 0.78rem; color: var(--slate-400); }
+
+      /* ── CTA band ── */
+      .cta-band {
+        background: linear-gradient(135deg, var(--green-dark) 0%, var(--slate-900) 100%);
+        color: white;
+        padding: 88px 24px;
+        text-align: center;
+      }
+      .cta-band h2 {
+        font-size: clamp(1.8rem, 4vw, 2.8rem);
+        font-weight: 800;
+        margin-bottom: 16px;
+        letter-spacing: -0.02em;
+      }
+      .cta-band p { font-size: 1.05rem; opacity: 0.8; margin-bottom: 36px; max-width: 520px; margin-left: auto; margin-right: auto; }
+      .cta-buttons { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+
+      /* ── Footer ── */
+      footer {
+        background: var(--slate-900);
+        color: rgba(255,255,255,0.6);
+        padding: 48px 24px 32px;
+      }
+      .footer-inner {
+        max-width: 1100px;
+        margin: 0 auto;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 32px;
+        padding-bottom: 32px;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        margin-bottom: 24px;
+      }
+      .footer-brand .logo { color: white; margin-bottom: 10px; }
+      .footer-brand p { font-size: 0.85rem; max-width: 280px; line-height: 1.65; }
+      .footer-links h4 { color: white; font-size: 0.85rem; font-weight: 700; margin-bottom: 14px; }
+      .footer-links ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+      .footer-links a { font-size: 0.85rem; color: rgba(255,255,255,0.5); transition: color 0.15s; }
+      .footer-links a:hover { color: white; }
+      .footer-bottom {
+        max-width: 1100px;
+        margin: 0 auto;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+        font-size: 0.8rem;
+      }
+      .footer-bottom a { color: rgba(255,255,255,0.5); }
+      .footer-bottom a:hover { color: white; }
+    </style>
+  </head>
+  <body>
+
+    <!-- NAV -->
+    <nav>
+      <div class="nav-inner">
+        <a href="/" class="logo">
+          <div class="logo-icon">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.77.46 3.43 1.27 4.88L2 22l5.24-1.25C8.6 21.55 10.26 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm4.9 14.1c-.21.58-1.22 1.11-1.68 1.18-.45.07-.98.1-1.58-.1-.36-.12-.82-.28-1.41-.55-2.48-1.07-4.1-3.57-4.22-3.73-.12-.17-.98-1.3-.98-2.48s.62-1.76.84-2c.22-.24.48-.3.64-.3.16 0 .32.01.46.01s.34-.05.52.4c.19.44.65 1.58.71 1.7.06.12.1.26.02.42-.08.16-.12.26-.24.4-.12.14-.25.31-.36.42-.12.12-.24.25-.1.49.14.24.62.97 1.33 1.57.91.79 1.68 1.03 1.92 1.15.24.12.38.1.52-.06.14-.16.6-.7.76-.94.16-.24.32-.2.54-.12.22.08 1.4.66 1.64.78.24.12.4.18.46.28.06.1.06.58-.15 1.16z"/></svg>
+          </div>
+          Jyoti Stores
+        </a>
+        <div class="nav-links">
+          <a href="#how-it-works">How it works</a>
+          <a href="#features">Features</a>
+          <a href="#for-schools">For schools</a>
+          <a href="/privacy-policy.html">Privacy Policy</a>
+          <a href="https://wa.me/" class="nav-cta">Order via WhatsApp</a>
+        </div>
+      </div>
+    </nav>
+
+    <!-- HERO -->
+    <section class="hero">
+      <div class="hero-inner">
+        <div class="hero-badge">
+          <span class="hero-badge-dot"></span>
+          Powered by WhatsApp Business
+        </div>
+        <h1>School books &amp; stationery,<br><span>ordered on WhatsApp</span></h1>
+        <p>Parents simply message us on WhatsApp to order their child's complete school booklist. No app downloads. No website logins. Doorstep delivery or school collection.</p>
+        <div class="hero-actions">
+          <a href="https://wa.me/" class="btn-primary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.77.46 3.43 1.27 4.88L2 22l5.24-1.25C8.6 21.55 10.26 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm4.9 14.1c-.21.58-1.22 1.11-1.68 1.18-.45.07-.98.1-1.58-.1-.36-.12-.82-.28-1.41-.55-2.48-1.07-4.1-3.57-4.22-3.73-.12-.17-.98-1.3-.98-2.48s.62-1.76.84-2c.22-.24.48-.3.64-.3.16 0 .32.01.46.01s.34-.05.52.4c.19.44.65 1.58.71 1.7.06.12.1.26.02.42-.08.16-.12.26-.24.4-.12.14-.25.31-.36.42-.12.12-.24.25-.1.49.14.24.62.97 1.33 1.57.91.79 1.68 1.03 1.92 1.15.24.12.38.1.52-.06.14-.16.6-.7.76-.94.16-.24.32-.2.54-.12.22.08 1.4.66 1.64.78.24.12.4.18.46.28.06.1.06.58-.15 1.16z"/></svg>
+            Start Ordering Now
+          </a>
+          <a href="#how-it-works" class="btn-secondary">
+            See how it works
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- PARTNERS STRIP -->
+    <div class="partners">
+      <div class="partners-inner">
+        <span class="partners-label">Integrated with</span>
+        <div class="partner-pill">
+          <svg viewBox="0 0 24 24" fill="#128C7E"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.77.46 3.43 1.27 4.88L2 22l5.24-1.25C8.6 21.55 10.26 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2z"/></svg>
+          WhatsApp Business
+        </div>
+        <div class="partner-pill">
+          <svg viewBox="0 0 24 24" fill="#2d76d9"><rect width="24" height="24" rx="4" fill="#2d76d9"/><text x="4" y="17" fill="white" font-size="11" font-weight="800">R</text></svg>
+          Razorpay Payments
+        </div>
+        <div class="partner-pill">
+          <svg viewBox="0 0 24 24" fill="#e84b1f"><rect width="24" height="24" rx="4" fill="#e84b1f"/><text x="3" y="17" fill="white" font-size="9" font-weight="800">DEL</text></svg>
+          Delhivery Courier
+        </div>
+        <div class="partner-pill">
+          <svg viewBox="0 0 24 24" fill="#3ecf8e"><rect width="24" height="24" rx="4" fill="#3ecf8e"/><text x="4" y="17" fill="white" font-size="11" font-weight="800">S</text></svg>
+          Supabase Cloud
+        </div>
+        <div class="partner-pill">
+          <svg viewBox="0 0 24 24" fill="#1877f2"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm2.5 7h-1.5v-1a.5.5 0 0 1 .5-.5H14V6h-1.5A2 2 0 0 0 10.5 8v1H9v2h1.5v5H13v-5h1.5l.5-2z"/></svg>
+          Meta Business Platform
+        </div>
+      </div>
+    </div>
+
+    <!-- HOW IT WORKS -->
+    <section class="how" id="how-it-works">
+      <div class="section-inner">
+        <div class="section-label">The Process</div>
+        <h2 class="section-heading">From WhatsApp message to doorstep delivery</h2>
+        <p class="section-sub">Our automated ordering flow guides parents through selecting items, choosing delivery, and paying — all within WhatsApp.</p>
+        <div class="steps">
+          <div class="step">
+            <div class="step-num">1</div>
+            <h3>Parent messages us</h3>
+            <p>A parent starts a conversation on our WhatsApp Business number. They share their school's unique 4-digit code to identify their school.</p>
+          </div>
+          <div class="step">
+            <div class="step-num">2</div>
+            <h3>Select class &amp; items</h3>
+            <p>Our chatbot presents the correct booklist for their child's class. Parents select the books and stationery items they need.</p>
+          </div>
+          <div class="step">
+            <div class="step-num">3</div>
+            <h3>Choose delivery</h3>
+            <p>Parents choose home delivery (with address) or collection from school. The order total and delivery charge are confirmed.</p>
+          </div>
+          <div class="step">
+            <div class="step-num">4</div>
+            <h3>Pay via Razorpay</h3>
+            <p>A secure Razorpay payment link is shared in chat. Parents pay online — cards, UPI, wallets all accepted.</p>
+          </div>
+          <div class="step">
+            <div class="step-num">5</div>
+            <h3>Order is packed</h3>
+            <p>On payment confirmation, the order moves to fulfilment. Our team packs the books and stationery with care.</p>
+          </div>
+          <div class="step">
+            <div class="step-num">6</div>
+            <h3>Shipped &amp; tracked</h3>
+            <p>Shipments are dispatched via Delhivery. Parents receive an AWB tracking number over WhatsApp and can follow delivery live.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FEATURES -->
+    <section class="features" id="features">
+      <div class="section-inner">
+        <div class="section-label">Features</div>
+        <h2 class="section-heading">Everything needed for school ordering</h2>
+        <p class="section-sub">A complete end-to-end platform — from the parent's WhatsApp chat to the final delivery scan.</p>
+        <div class="features-grid">
+
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+            </div>
+            <h3>WhatsApp-First Ordering</h3>
+            <p>Parents order entirely within WhatsApp — no separate app or website needed. Works on any smartphone.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+            </div>
+            <h3>Multi-School Management</h3>
+            <p>Manage multiple schools from one dashboard. Each school gets a unique 4-digit code and its own class-level booklists.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+            </div>
+            <h3>Integrated Payments</h3>
+            <p>Razorpay payment links sent directly in chat. Supports UPI, credit/debit cards, net banking, and wallets.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+            </div>
+            <h3>Courier &amp; Tracking</h3>
+            <p>Automatic shipment creation with Delhivery. Parents receive live tracking numbers via WhatsApp the moment parcels are dispatched.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+            </div>
+            <h3>Analytics Dashboard</h3>
+            <p>Real-time overview of orders, revenue, delivery status, and school performance — all in one management dashboard.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+            </div>
+            <h3>Secure &amp; Compliant</h3>
+            <p>Built on Supabase with Row-Level Security. All data encrypted in transit and at rest. GDPR-aware data practices.</p>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- STATS BAND -->
+    <div class="stats-band">
+      <div class="stats-grid">
+        <div class="stat-item">
+          <h2>100%</h2>
+          <p>WhatsApp-native ordering — no extra apps for parents</p>
+        </div>
+        <div class="stat-item">
+          <h2>2 min</h2>
+          <p>Average time to complete an order on WhatsApp</p>
+        </div>
+        <div class="stat-item">
+          <h2>School + Home</h2>
+          <p>Dual delivery options for every order</p>
+        </div>
+        <div class="stat-item">
+          <h2>End-to-End</h2>
+          <p>Order, payment, fulfilment, and delivery tracking in one system</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- FOR SCHOOLS -->
+    <section class="for-schools" id="for-schools">
+      <div class="section-inner">
+        <div class="for-schools-grid">
+          <div>
+            <div class="section-label">For Schools</div>
+            <h2 class="section-heading">One platform for every school's booklist needs</h2>
+            <p class="section-sub" style="margin-bottom: 36px;">We partner with schools to digitalise their annual booklist ordering process — removing the chaos of physical distribution and cash handling.</p>
+            <div class="schools-list">
+              <div class="schools-list-item">
+                <div class="check-circle">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <div>
+                  <h4>Unique school code</h4>
+                  <p>Each partner school gets a private 4-digit code shared only with their parents to access the correct booklist.</p>
+                </div>
+              </div>
+              <div class="schools-list-item">
+                <div class="check-circle">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <div>
+                  <h4>Class-level item lists</h4>
+                  <p>Books and stationery are configured per class so each parent sees only what is relevant for their child.</p>
+                </div>
+              </div>
+              <div class="schools-list-item">
+                <div class="check-circle">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <div>
+                  <h4>Flexible delivery</h4>
+                  <p>Parents can choose home delivery or bulk-ship to the school for parents to collect — whatever the school prefers.</p>
+                </div>
+              </div>
+              <div class="schools-list-item">
+                <div class="check-circle">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <div>
+                  <h4>School performance reports</h4>
+                  <p>See order volumes, revenue, and fulfilment rates broken down by school directly in the admin dashboard.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="schools-visual">
+            <div>
+              <div style="font-size:0.7rem;opacity:0.5;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:20px;">Sample WhatsApp conversation</div>
+              <div class="chat-bubble-wrap">
+                <div class="chat-row">
+                  <div class="chat-avatar green">SK</div>
+                  <div class="bubble received">
+                    Welcome to Jyoti Stores! Please enter your school's 4-digit code to get started.
+                    <div class="time">10:02</div>
+                  </div>
+                </div>
+                <div class="chat-row right">
+                  <div class="chat-avatar slate">P</div>
+                  <div class="bubble sent">
+                    1234
+                    <div class="time">10:03</div>
+                  </div>
+                </div>
+                <div class="chat-row">
+                  <div class="chat-avatar green">SK</div>
+                  <div class="bubble received">
+                    Found: <strong>Springfield Primary</strong>. Which class is your child in?
+                    1. Class 1 &nbsp; 2. Class 2 &nbsp; 3. Class 3
+                    <div class="time">10:03</div>
+                  </div>
+                </div>
+                <div class="chat-row right">
+                  <div class="chat-avatar slate">P</div>
+                  <div class="bubble sent">
+                    2
+                    <div class="time">10:04</div>
+                  </div>
+                </div>
+                <div class="chat-row">
+                  <div class="chat-avatar green">SK</div>
+                  <div class="bubble received">
+                    Class 2 booklist ready! 8 books + stationery kit. Total: <strong>Rs 1,240</strong>. Choose delivery: 1. School  2. Home
+                    <div class="time">10:04</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="schools-visual-label">End-to-end ordering in under 2 minutes</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TESTIMONIALS -->
+    <section class="testimonials">
+      <div class="section-inner">
+        <div class="section-label">Testimonials</div>
+        <h2 class="section-heading">What parents &amp; schools say</h2>
+        <div class="testimonial-grid">
+          <div class="testimonial-card">
+            <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+            <blockquote>"It was so easy. I just messaged, picked the items, paid on the link they sent, and the books arrived at home in two days. No running around at all."</blockquote>
+            <div class="testimonial-author">
+              <div class="author-avatar">PR</div>
+              <div>
+                <div class="author-name">Priya R.</div>
+                <div class="author-role">Parent, Class 3</div>
+              </div>
+            </div>
+          </div>
+          <div class="testimonial-card">
+            <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+            <blockquote>"Our parents used to queue for hours on booklist day. Since switching to Jyoti Stores, there is no queue, no cash, and every parent gets the correct items."</blockquote>
+            <div class="testimonial-author">
+              <div class="author-avatar">AM</div>
+              <div>
+                <div class="author-name">Anita M.</div>
+                <div class="author-role">School Administrator</div>
+              </div>
+            </div>
+          </div>
+          <div class="testimonial-card">
+            <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+            <blockquote>"I ordered at midnight after the kids were asleep. The WhatsApp bot walked me through everything in minutes and I could track the parcel right to our gate."</blockquote>
+            <div class="testimonial-author">
+              <div class="author-avatar">SK</div>
+              <div>
+                <div class="author-name">Suresh K.</div>
+                <div class="author-role">Parent, Class 1 &amp; 4</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA BAND -->
+    <div class="cta-band">
+      <h2>Ready to simplify school ordering?</h2>
+      <p>Get in touch to onboard your school, or start ordering your child's books today via WhatsApp.</p>
+      <div class="cta-buttons">
+        <a href="https://wa.me/" class="btn-primary">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.77.46 3.43 1.27 4.88L2 22l5.24-1.25C8.6 21.55 10.26 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm4.9 14.1c-.21.58-1.22 1.11-1.68 1.18-.45.07-.98.1-1.58-.1-.36-.12-.82-.28-1.41-.55-2.48-1.07-4.1-3.57-4.22-3.73-.12-.17-.98-1.3-.98-2.48s.62-1.76.84-2c.22-.24.48-.3.64-.3.16 0 .32.01.46.01s.34-.05.52.4c.19.44.65 1.58.71 1.7.06.12.1.26.02.42-.08.16-.12.26-.24.4-.12.14-.25.31-.36.42-.12.12-.24.25-.1.49.14.24.62.97 1.33 1.57.91.79 1.68 1.03 1.92 1.15.24.12.38.1.52-.06.14-.16.6-.7.76-.94.16-.24.32-.2.54-.12.22.08 1.4.66 1.64.78.24.12.4.18.46.28.06.1.06.58-.15 1.16z"/></svg>
+          Order via WhatsApp
+        </a>
+        <a href="mailto:hello@schoolkart.in" class="btn-secondary">Partner with us</a>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer>
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <a href="/" class="logo">
+            <div class="logo-icon">
+              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.77.46 3.43 1.27 4.88L2 22l5.24-1.25C8.6 21.55 10.26 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm4.9 14.1c-.21.58-1.22 1.11-1.68 1.18-.45.07-.98.1-1.58-.1-.36-.12-.82-.28-1.41-.55-2.48-1.07-4.1-3.57-4.22-3.73-.12-.17-.98-1.3-.98-2.48s.62-1.76.84-2c.22-.24.48-.3.64-.3.16 0 .32.01.46.01s.34-.05.52.4c.19.44.65 1.58.71 1.7.06.12.1.26.02.42-.08.16-.12.26-.24.4-.12.14-.25.31-.36.42-.12.12-.24.25-.1.49.14.24.62.97 1.33 1.57.91.79 1.68 1.03 1.92 1.15.24.12.38.1.52-.06.14-.16.6-.7.76-.94.16-.24.32-.2.54-.12.22.08 1.4.66 1.64.78.24.12.4.18.46.28.06.1.06.58-.15 1.16z"/></svg>
+            </div>
+            Jyoti Stores
+          </a>
+          <p>School books and stationery ordering, simplified. Parents order via WhatsApp — we handle the rest.</p>
+        </div>
+        <div class="footer-links">
+          <h4>Platform</h4>
+          <ul>
+            <li><a href="#how-it-works">How it works</a></li>
+            <li><a href="#features">Features</a></li>
+            <li><a href="#for-schools">For schools</a></li>
+          </ul>
+        </div>
+        <div class="footer-links">
+          <h4>Legal</h4>
+          <ul>
+            <li><a href="/privacy-policy.html">Privacy Policy</a></li>
+          </ul>
+        </div>
+        <div class="footer-links">
+          <h4>Contact</h4>
+          <ul>
+            <li><a href="https://wa.me/">WhatsApp Us</a></li>
+            <li><a href="mailto:hello@schoolkart.in">hello@schoolkart.in</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>&copy; 2026 Jyoti Stores. All rights reserved.</span>
+        <a href="/privacy-policy.html">Privacy Policy</a>
+      </div>
+    </footer>
+
+  </body>
+</html>
