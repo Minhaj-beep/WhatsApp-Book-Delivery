@@ -170,7 +170,7 @@ export default function OrderAnalyticsReport() {
             <tbody className="divide-y divide-slate-200">
               {stats.recentOrders.map((order) => (
                 <tr key={order.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 text-sm text-slate-900">#{order.id.slice(0, 8)}</td>
+                  <td className="px-4 py-3 text-sm text-slate-900">##{String(order.id).slice(0, 8)}</td>
                   <td className="px-4 py-3 text-sm text-slate-900">{order.schools?.name || 'N/A'}</td>
                   <td className="px-4 py-3 text-sm text-slate-900">
                     {formatCurrency(order.total_amount_paise)}
