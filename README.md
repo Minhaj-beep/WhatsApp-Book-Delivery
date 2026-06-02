@@ -375,4 +375,3 @@ For issues or questions:
 ## License
 
 Proprietary - All rights reserved
-# WhatsApp-Book-Delivery

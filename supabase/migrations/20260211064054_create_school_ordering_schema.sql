@@ -379,7 +379,6 @@ CREATE TABLE IF NOT EXISTS orders (
   items_total_paise integer NOT NULL,
   total_amount_paise integer NOT NULL,
   payment_id text,
-  payment_link text,
   payment_status text CHECK (payment_status IN ('pending','paid','failed')) DEFAULT 'pending',
   status text CHECK (status IN ('pending','confirmed','processing','out_for_delivery','delivered','cancelled')) DEFAULT 'pending',
   package_count int DEFAULT 1,

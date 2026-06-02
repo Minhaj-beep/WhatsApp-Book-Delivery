@@ -20,7 +20,10 @@ interface CreateOrderRequest {
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 200, headers: corsHeaders });
+    return new Response(null, {
+      status: 200,
+      headers: corsHeaders,
+    });
   }
 
   try {
@@ -31,7 +34,6 @@ Deno.serve(async (req: Request) => {
     const requestData: CreateOrderRequest = await req.json();
     const { school_code, class_id, items, delivery_type, parent_phone, parent_name, address } = requestData;
 
-    // 1) validate school
     const { data: school, error: schoolError } = await supabase
       .from("schools")
       .select("id")
@@ -47,35 +49,32 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // 2) load delivery charges from settings (fallback defaults if missing)
     const { data: settings } = await supabase
       .from("settings")
       .select("id, value")
       .in("id", ["school_delivery_charge_paise", "home_delivery_charge_paise"]);
 
     const settingsMap: Record<string, number> = {};
-    (settings || []).forEach((s: any) => {
+    settings?.forEach((s) => {
       settingsMap[s.id] = Number(s.value);
     });
 
     const delivery_charge_paise = delivery_type === 'school'
-      ? (settingsMap.school_delivery_charge_paise ?? 5000) // default ₹50 => 5000 paise
-      : (settingsMap.home_delivery_charge_paise ?? 15000); // default ₹150 => 15000 paise
+      ? (settingsMap.school_delivery_charge_paise || 5000)
+      : (settingsMap.home_delivery_charge_paise || 15000);
 
-    // 3) fetch items from DB and validate
-    const itemIds = items.map(i => i.item_id);
     const { data: itemsData, error: itemsError } = await supabase
       .from("items")
       .select("id, price_paise, stock")
-      .in("id", itemIds);
+      .in("id", items.map(i => i.item_id));
 
     if (itemsError) throw itemsError;
 
     let items_total_paise = 0;
-    const orderItems: Array<{ item_id: number; qty: number; unit_price_paise: number }> = [];
+    const orderItems = [];
 
     for (const orderItem of items) {
-      const item = (itemsData || []).find((i: any) => i.id === orderItem.item_id);
+      const item = itemsData?.find(i => i.id === orderItem.item_id);
       if (!item) {
         return new Response(
           JSON.stringify({ error: `Item ${orderItem.item_id} not found` }),
@@ -90,18 +89,16 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      items_total_paise += Number(item.price_paise) * orderItem.qty;
+      items_total_paise += item.price_paise * orderItem.qty;
       orderItems.push({
         item_id: orderItem.item_id,
         qty: orderItem.qty,
-        unit_price_paise: Number(item.price_paise),
+        unit_price_paise: item.price_paise,
       });
     }
 
-    // 4) compute total
     const total_amount_paise = items_total_paise + delivery_charge_paise;
 
-    // 5) insert order
     const { data: order, error: orderError } = await supabase
       .from("orders")
       .insert({
@@ -110,7 +107,7 @@ Deno.serve(async (req: Request) => {
         parent_phone,
         parent_name,
         delivery_type,
-        delivery_address: address || null,
+        delivery_address: address,
         delivery_charge_paise,
         items_total_paise,
         total_amount_paise,
@@ -123,104 +120,91 @@ Deno.serve(async (req: Request) => {
 
     if (orderError) throw orderError;
 
-    // 6) insert order items
-    const orderItemsWithOrderId = orderItems.map(it => ({ ...it, order_id: order.id }));
-    const { error: orderItemsError } = await supabase.from("order_items").insert(orderItemsWithOrderId);
+    const orderItemsWithOrderId = orderItems.map(item => ({
+      ...item,
+      order_id: order.id,
+    }));
+
+    const { error: orderItemsError } = await supabase
+      .from("order_items")
+      .insert(orderItemsWithOrderId);
+
     if (orderItemsError) throw orderItemsError;
 
-    // 7) trigger compute-weights function (best-effort, log failure)
-    try {
-      const computeWeightsUrl = `${supabaseUrl}/functions/v1/compute-weights`;
-      const computeWeightsRes = await fetch(computeWeightsUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${supabaseKey}`,
-        },
-        body: JSON.stringify({ order_id: order.id }),
-      });
-      if (!computeWeightsRes.ok) {
-        console.error("compute-weights failed:", await computeWeightsRes.text());
-      }
-    } catch (err) {
-      console.error("compute-weights call error:", err);
+    const computeWeightsUrl = `${supabaseUrl}/functions/v1/compute-weights`;
+    const computeWeightsRes = await fetch(computeWeightsUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${supabaseKey}`,
+      },
+      body: JSON.stringify({ order_id: order.id }),
+    });
+
+    if (!computeWeightsRes.ok) {
+      console.error("Failed to compute weights:", await computeWeightsRes.text());
     }
 
-    // 8) Create Razorpay Payment Link (recommended for sending short URL in WhatsApp)
     const razorpayKeyId = Deno.env.get("RAZORPAY_KEY_ID");
     const razorpayKeySecret = Deno.env.get("RAZORPAY_KEY_SECRET");
 
-    let payment_link: string | null = null;
-    let razorpay_payment_link_id: string | null = null;
+    let payment_link = null;
+    let razorpay_order_id = null;
 
     if (razorpayKeyId && razorpayKeySecret) {
-      try {
-        const amount = total_amount_paise; // paise integer
-        const customer = {
-          name: parent_name || `Parent for order ${order.id}`,
-          contact: parent_phone || "",
-        };
+      const amount = total_amount_paise;
+      const razorpayPayload = {
+        amount,
+        currency: "INR",
+        receipt: `order_${order.id}`,
+        notes: {
+          order_id: order.id.toString(),
+          parent_phone,
+        },
+      };
 
-        const paymentLinkPayload = {
-          amount,
-          currency: "INR",
-          accept_partial: false,
-          description: `Order #${order.id}`,
-          reference_id: `order_${order.id}`,
-          customer,
-          notify: { sms: true, email: false },
-          notes: {
-            order_id: order.id.toString(),
-            parent_phone,
-          },
-        };
+      const authHeader = `Basic ${btoa(`${razorpayKeyId}:${razorpayKeySecret}`)}`;
+      const razorpayRes = await fetch("https://api.razorpay.com/v1/orders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": authHeader,
+        },
+        body: JSON.stringify(razorpayPayload),
+      });
 
-        const authHeader = `Basic ${btoa(`${razorpayKeyId}:${razorpayKeySecret}`)}`;
-        const rLinkRes = await fetch("https://api.razorpay.com/v1/payment_links", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: authHeader,
-          },
-          body: JSON.stringify(paymentLinkPayload),
-        });
+      if (razorpayRes.ok) {
+        const razorpayOrder = await razorpayRes.json();
+        razorpay_order_id = razorpayOrder.id;
+        payment_link = `https://rzp.io/i/${razorpay_order_id}`;
 
-        const rLinkJson = await rLinkRes.json();
-
-        if (!rLinkRes.ok) {
-          console.error("Razorpay payment link error:", rLinkRes.status, rLinkJson);
-        } else {
-          payment_link = rLinkJson.short_url || rLinkJson.long_url || null;
-          razorpay_payment_link_id = rLinkJson.id || null; // this is link_xxx
-          // save payment info to order
-          await supabase
-            .from("orders")
-            .update({ payment_id: razorpay_payment_link_id, payment_link })
-            .eq("id", order.id);
-        }
-      } catch (err) {
-        console.error("Error creating Razorpay payment link:", err);
+        await supabase
+          .from("orders")
+          .update({ payment_id: razorpay_order_id })
+          .eq("id", order.id);
       }
-    } else {
-      console.warn("Razorpay keys not configured - skipping payment link creation.");
     }
 
-    // 9) return result
-    return new Response(JSON.stringify({
-      success: true,
-      order_id: order.id,
-      total_amount_paise,
-      payment_link: payment_link,
-      razorpay_payment_link_id,
-    }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-
-  } catch (error: any) {
+    return new Response(
+      JSON.stringify({
+        success: true,
+        order_id: order.id,
+        total_amount_paise,
+        payment_link,
+        razorpay_order_id,
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
+  } catch (error) {
     console.error("Error creating order:", error);
-    return new Response(JSON.stringify({ error: error?.message || String(error) }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   }
 });
