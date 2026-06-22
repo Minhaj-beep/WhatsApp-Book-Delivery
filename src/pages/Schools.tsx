@@ -79,12 +79,19 @@ export default function Schools() {
       const name = formData.get('name') as string;
       const address = formData.get('address') as string;
       const contact_phone = formData.get('contact_phone') as string;
+      const zipcode = formData.get('zipcode') as string;
       const active = formData.get('active') === 'on';
 
       if (editingSchool) {
         const { error } = await supabase
           .from('schools')
-          .update({ name, address, contact_phone, active })
+          .update({
+            name,
+            address,
+            contact_phone,
+            zipcode,
+            active,
+          })
           .eq('id', editingSchool.id);
 
         if (error) throw error;
@@ -106,7 +113,14 @@ export default function Schools() {
 
         const { error } = await supabase
           .from('schools')
-          .insert({ name, code_4digit: code, address, contact_phone, active });
+          .insert({
+            name,
+            code_4digit: code,
+            address,
+            contact_phone,
+            zipcode,
+            active,
+          });
 
         if (error) throw error;
       }
@@ -249,7 +263,7 @@ export default function Schools() {
                           )}
                         </div>
                         <p className="text-sm text-slate-600 mt-1">
-                          {school.address} • {school.contact_phone} • Added {formatDate(school.created_at)}
+                          {school.address} • {school.zipcode} • {school.contact_phone} • Added {formatDate(school.created_at)}
                         </p>
                       </div>
                     </div>
@@ -362,6 +376,17 @@ export default function Schools() {
                   name="contact_phone"
                   type="tel"
                   defaultValue={editingSchool?.contact_phone || ''}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Zipcode
+                </label>
+                <input
+                  name="zipcode"
+                  type="text"
+                  defaultValue={editingSchool?.zipcode || ''}
                   className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent"
                 />
               </div>

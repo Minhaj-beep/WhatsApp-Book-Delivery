@@ -1,35 +1,73 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { OrderWithDetails } from '../types/database';
-import { formatCurrency, formatDate, getStatusColor, getStatusLabel } from '../lib/utils';
+import {
+  formatCurrency,
+  formatDate,
+  getStatusColor,
+  getStatusLabel,
+} from '../lib/utils';
 import { Search, Eye, Package, Truck } from 'lucide-react';
+
+function normalizeText(value?: string | null) {
+  return (value ?? '').trim().toLowerCase();
+}
+
+function getShipmentStatusColor(status?: string | null) {
+  switch (normalizeText(status)) {
+    case 'delivered':
+      return 'bg-green-100 text-green-800';
+    case 'out_for_delivery':
+      return 'bg-blue-100 text-blue-800';
+    case 'in_transit':
+      return 'bg-purple-100 text-purple-800';
+    case 'picked_up':
+      return 'bg-indigo-100 text-indigo-800';
+    case 'manifested':
+      return 'bg-sky-100 text-sky-800';
+    case 'rto':
+      return 'bg-red-100 text-red-800';
+    case 'cancelled':
+      return 'bg-red-100 text-red-800';
+    case 'non_serviceable':
+      return 'bg-orange-100 text-orange-800';
+    case 'unknown':
+      return 'bg-slate-100 text-slate-800';
+    default:
+      return 'bg-yellow-100 text-yellow-800';
+  }
+}
+
+function getShipmentStatusLabel(status?: string | null) {
+  const value = normalizeText(status) || 'pending';
+  return value.replace(/_/g, ' ');
+}
 
 export default function Orders() {
   const [orders, setOrders] = useState<OrderWithDetails[]>([]);
-  const [filteredOrders, setFilteredOrders] = useState<OrderWithDetails[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [selectedOrder, setSelectedOrder] = useState<OrderWithDetails | null>(null);
+  const [shipmentFilter, setShipmentFilter] = useState('all');
+  const [selectedOrder, setSelectedOrder] =
+    useState<OrderWithDetails | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadOrders();
   }, []);
 
-  useEffect(() => {
-    filterOrders();
-  }, [orders, searchTerm, statusFilter]);
-
   async function loadOrders() {
     try {
       const { data, error } = await supabase
         .from('orders')
-        .select(`
+        .select(
+          `
           *,
           school:schools(*),
           class:classes(*),
           items:order_items(*, item:items(*))
-        `)
+        `
+        )
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -41,36 +79,60 @@ export default function Orders() {
     }
   }
 
-  function filterOrders() {
-    let filtered = orders;
+  const filteredOrders = useMemo(() => {
+    let filtered = [...orders];
 
     if (statusFilter !== 'all') {
-      filtered = filtered.filter(o => o.status === statusFilter);
-    }
-
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(o =>
-        o.parent_phone.includes(term) ||
-        o.parent_name?.toLowerCase().includes(term) ||
-        o.courier_awb?.toLowerCase().includes(term) ||
-        o.id.toString().includes(term)
+      filtered = filtered.filter(
+        (order) => normalizeText(order.status) === statusFilter
       );
     }
 
-    setFilteredOrders(filtered);
-  }
+    if (shipmentFilter !== 'all') {
+      filtered = filtered.filter(
+        (order) => normalizeText(order.shipment_status) === shipmentFilter
+      );
+    }
+
+    const term = searchTerm.trim().toLowerCase();
+
+    if (term) {
+      filtered = filtered.filter((order) => {
+        const phone = String(order.parent_phone ?? '').toLowerCase();
+        const name = String(order.parent_name ?? '').toLowerCase();
+        const awb = String(order.courier_awb ?? '').toLowerCase();
+        const id = String(order.id);
+        const shipmentStatus = String(order.shipment_status ?? '').toLowerCase();
+        const paymentStatus = String(order.payment_status ?? '').toLowerCase();
+        const schoolName = String(order.school?.name ?? '').toLowerCase();
+
+        return (
+          phone.includes(term) ||
+          name.includes(term) ||
+          awb.includes(term) ||
+          id.includes(term) ||
+          shipmentStatus.includes(term) ||
+          paymentStatus.includes(term) ||
+          schoolName.includes(term)
+        );
+      });
+    }
+
+    return filtered;
+  }, [orders, searchTerm, statusFilter, shipmentFilter]);
 
   async function viewOrderDetails(orderId: number) {
     try {
       const { data, error } = await supabase
         .from('orders')
-        .select(`
+        .select(
+          `
           *,
           school:schools(*),
           class:classes(*),
           items:order_items(*, item:items(*))
-        `)
+        `
+        )
         .eq('id', orderId)
         .single();
 
@@ -96,33 +158,53 @@ export default function Orders() {
     <div className="p-6">
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-slate-900">Orders</h1>
-        <p className="text-slate-600 mt-1">View and manage customer orders</p>
+        <p className="text-slate-600 mt-1">
+          View and manage customer orders
+        </p>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
             <input
               type="text"
-              placeholder="Search by phone, name, AWB, or order ID..."
+              placeholder="Search by phone, name, AWB, order ID, school, or shipment status..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent"
             />
           </div>
+
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent"
           >
-            <option value="all">All Statuses</option>
+            <option value="all">All Order Statuses</option>
             <option value="pending">Pending</option>
             <option value="confirmed">Confirmed</option>
             <option value="processing">Processing</option>
             <option value="out_for_delivery">Out for Delivery</option>
             <option value="delivered">Delivered</option>
             <option value="cancelled">Cancelled</option>
+          </select>
+
+          <select
+            value={shipmentFilter}
+            onChange={(e) => setShipmentFilter(e.target.value)}
+            className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+          >
+            <option value="all">All Shipment Statuses</option>
+            <option value="pending">Pending</option>
+            <option value="manifested">Manifested</option>
+            <option value="picked_up">Picked Up</option>
+            <option value="in_transit">In Transit</option>
+            <option value="out_for_delivery">Out for Delivery</option>
+            <option value="delivered">Delivered</option>
+            <option value="cancelled">Cancelled</option>
+            <option value="rto">RTO</option>
+            <option value="non_serviceable">Non Serviceable</option>
           </select>
         </div>
       </div>
@@ -137,47 +219,96 @@ export default function Orders() {
             <table className="w-full">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th className="text-left py-3 px-4 font-medium text-slate-700">Order ID</th>
-                  <th className="text-left py-3 px-4 font-medium text-slate-700">Customer</th>
-                  <th className="text-left py-3 px-4 font-medium text-slate-700">School</th>
-                  <th className="text-left py-3 px-4 font-medium text-slate-700">Amount</th>
-                  <th className="text-left py-3 px-4 font-medium text-slate-700">Payment</th>
-                  <th className="text-left py-3 px-4 font-medium text-slate-700">Status</th>
-                  <th className="text-left py-3 px-4 font-medium text-slate-700">Date</th>
-                  <th className="text-right py-3 px-4 font-medium text-slate-700">Actions</th>
+                  <th className="text-left py-3 px-4 font-medium text-slate-700">
+                    Order ID
+                  </th>
+                  <th className="text-left py-3 px-4 font-medium text-slate-700">
+                    Customer
+                  </th>
+                  <th className="text-left py-3 px-4 font-medium text-slate-700">
+                    School
+                  </th>
+                  <th className="text-left py-3 px-4 font-medium text-slate-700">
+                    Amount
+                  </th>
+                  <th className="text-left py-3 px-4 font-medium text-slate-700">
+                    Payment
+                  </th>
+                  <th className="text-left py-3 px-4 font-medium text-slate-700">
+                    Status
+                  </th>
+                  <th className="text-left py-3 px-4 font-medium text-slate-700">
+                    Shipment Status
+                  </th>
+                  <th className="text-left py-3 px-4 font-medium text-slate-700">
+                    Date
+                  </th>
+                  <th className="text-right py-3 px-4 font-medium text-slate-700">
+                    Actions
+                  </th>
                 </tr>
               </thead>
+
               <tbody className="divide-y divide-slate-200">
                 {filteredOrders.map((order) => (
                   <tr key={order.id} className="hover:bg-slate-50">
                     <td className="py-3 px-4">
                       <span className="font-mono text-sm">#{order.id}</span>
                     </td>
+
                     <td className="py-3 px-4">
                       <div>
-                        <div className="font-medium text-slate-900">{order.parent_name || 'N/A'}</div>
-                        <div className="text-xs text-slate-600">{order.parent_phone}</div>
+                        <div className="font-medium text-slate-900">
+                          {order.parent_name || 'N/A'}
+                        </div>
+                        <div className="text-xs text-slate-600">
+                          {order.parent_phone}
+                        </div>
                       </div>
                     </td>
+
                     <td className="py-3 px-4 text-sm text-slate-600">
                       {order.school?.name || 'N/A'}
                     </td>
+
                     <td className="py-3 px-4 font-medium text-slate-900">
                       {formatCurrency(order.total_amount_paise)}
                     </td>
+
                     <td className="py-3 px-4">
-                      <span className={`px-2 py-1 text-xs rounded ${getStatusColor(order.payment_status)}`}>
+                      <span
+                        className={`px-2 py-1 text-xs rounded ${getStatusColor(
+                          order.payment_status
+                        )}`}
+                      >
                         {getStatusLabel(order.payment_status)}
                       </span>
                     </td>
+
                     <td className="py-3 px-4">
-                      <span className={`px-2 py-1 text-xs rounded ${getStatusColor(order.status)}`}>
+                      <span
+                        className={`px-2 py-1 text-xs rounded ${getStatusColor(
+                          order.status
+                        )}`}
+                      >
                         {getStatusLabel(order.status)}
                       </span>
                     </td>
+
+                    <td className="py-3 px-4">
+                      <span
+                        className={`px-2 py-1 text-xs rounded ${getShipmentStatusColor(
+                          order.shipment_status
+                        )}`}
+                      >
+                        {getShipmentStatusLabel(order.shipment_status)}
+                      </span>
+                    </td>
+
                     <td className="py-3 px-4 text-sm text-slate-600">
                       {formatDate(order.created_at)}
                     </td>
+
                     <td className="py-3 px-4 text-right">
                       <button
                         onClick={() => viewOrderDetails(order.id)}
@@ -197,12 +328,16 @@ export default function Orders() {
 
       {selectedOrder && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full my-8">
+          <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full h-[85vh] flex flex-col overflow-hidden">
             <div className="p-6 border-b border-slate-200">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-2xl font-bold text-slate-900">Order #{selectedOrder.id}</h2>
-                  <p className="text-slate-600 mt-1">Placed on {formatDate(selectedOrder.created_at)}</p>
+                  <h2 className="text-2xl font-bold text-slate-900">
+                    Order #{selectedOrder.id}
+                  </h2>
+                  <p className="text-slate-600 mt-1">
+                    Placed on {formatDate(selectedOrder.created_at)}
+                  </p>
                 </div>
                 <button
                   onClick={() => setSelectedOrder(null)}
@@ -213,47 +348,83 @@ export default function Orders() {
               </div>
             </div>
 
-            <div className="p-6 space-y-6">
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <h3 className="font-semibold text-slate-900 mb-3">Customer Information</h3>
+                  <h3 className="font-semibold text-slate-900 mb-3">
+                    Customer Information
+                  </h3>
                   <dl className="space-y-2">
                     <div>
                       <dt className="text-sm text-slate-600">Name</dt>
-                      <dd className="font-medium text-slate-900">{selectedOrder.parent_name || 'N/A'}</dd>
+                      <dd className="font-medium text-slate-900">
+                        {selectedOrder.parent_name || 'N/A'}
+                      </dd>
                     </div>
                     <div>
                       <dt className="text-sm text-slate-600">Phone</dt>
-                      <dd className="font-medium text-slate-900">{selectedOrder.parent_phone}</dd>
+                      <dd className="font-medium text-slate-900">
+                        {selectedOrder.parent_phone}
+                      </dd>
                     </div>
                     <div>
-                      <dt className="text-sm text-slate-600">Delivery Type</dt>
-                      <dd className="font-medium text-slate-900 capitalize">{selectedOrder.delivery_type}</dd>
+                      <dt className="text-sm text-slate-600">
+                        Delivery Type
+                      </dt>
+                      <dd className="font-medium text-slate-900 capitalize">
+                        {selectedOrder.delivery_type}
+                      </dd>
                     </div>
                     {selectedOrder.delivery_address && (
                       <div>
-                        <dt className="text-sm text-slate-600">Delivery Address</dt>
-                        <dd className="font-medium text-slate-900">{selectedOrder.delivery_address}</dd>
+                        <dt className="text-sm text-slate-600">
+                          Delivery Address
+                        </dt>
+                        <dd className="font-medium text-slate-900">
+                          {selectedOrder.delivery_address}
+                        </dd>
+                      </div>
+                    )}
+                    {selectedOrder.zipcode && (
+                      <div>
+                        <dt className="text-sm text-slate-600">
+                          Zipcode
+                        </dt>
+                        <dd className="font-medium text-slate-900">
+                          {selectedOrder.zipcode}
+                        </dd>
                       </div>
                     )}
                   </dl>
                 </div>
 
                 <div>
-                  <h3 className="font-semibold text-slate-900 mb-3">Order Details</h3>
+                  <h3 className="font-semibold text-slate-900 mb-3">
+                    Order Details
+                  </h3>
                   <dl className="space-y-2">
                     <div>
                       <dt className="text-sm text-slate-600">School</dt>
-                      <dd className="font-medium text-slate-900">{selectedOrder.school?.name || 'N/A'}</dd>
+                      <dd className="font-medium text-slate-900">
+                        {selectedOrder.school?.name || 'N/A'}
+                      </dd>
                     </div>
                     <div>
                       <dt className="text-sm text-slate-600">Class</dt>
-                      <dd className="font-medium text-slate-900">{selectedOrder.class?.name || 'N/A'}</dd>
+                      <dd className="font-medium text-slate-900">
+                        {selectedOrder.class?.name || 'N/A'}
+                      </dd>
                     </div>
                     <div>
-                      <dt className="text-sm text-slate-600">Payment Status</dt>
+                      <dt className="text-sm text-slate-600">
+                        Payment Status
+                      </dt>
                       <dd>
-                        <span className={`px-2 py-1 text-xs rounded ${getStatusColor(selectedOrder.payment_status)}`}>
+                        <span
+                          className={`px-2 py-1 text-xs rounded ${getStatusColor(
+                            selectedOrder.payment_status
+                          )}`}
+                        >
                           {getStatusLabel(selectedOrder.payment_status)}
                         </span>
                       </dd>
@@ -261,15 +432,39 @@ export default function Orders() {
                     <div>
                       <dt className="text-sm text-slate-600">Order Status</dt>
                       <dd>
-                        <span className={`px-2 py-1 text-xs rounded ${getStatusColor(selectedOrder.status)}`}>
+                        <span
+                          className={`px-2 py-1 text-xs rounded ${getStatusColor(
+                            selectedOrder.status
+                          )}`}
+                        >
                           {getStatusLabel(selectedOrder.status)}
+                        </span>
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-sm text-slate-600">
+                        Shipment Status
+                      </dt>
+                      <dd>
+                        <span
+                          className={`px-2 py-1 text-xs rounded ${getShipmentStatusColor(
+                            selectedOrder.shipment_status
+                          )}`}
+                        >
+                          {getShipmentStatusLabel(
+                            selectedOrder.shipment_status
+                          )}
                         </span>
                       </dd>
                     </div>
                     {selectedOrder.courier_awb && (
                       <div>
-                        <dt className="text-sm text-slate-600">AWB Number</dt>
-                        <dd className="font-mono text-sm text-slate-900">{selectedOrder.courier_awb}</dd>
+                        <dt className="text-sm text-slate-600">
+                          AWB Number
+                        </dt>
+                        <dd className="font-mono text-sm text-slate-900">
+                          {selectedOrder.courier_awb}
+                        </dd>
                       </div>
                     )}
                   </dl>
@@ -277,15 +472,25 @@ export default function Orders() {
               </div>
 
               <div>
-                <h3 className="font-semibold text-slate-900 mb-3">Order Items</h3>
+                <h3 className="font-semibold text-slate-900 mb-3">
+                  Order Items
+                </h3>
                 <div className="border border-slate-200 rounded-lg overflow-hidden">
                   <table className="w-full">
                     <thead className="bg-slate-50">
                       <tr>
-                        <th className="text-left py-2 px-4 text-sm font-medium text-slate-700">Item</th>
-                        <th className="text-center py-2 px-4 text-sm font-medium text-slate-700">Qty</th>
-                        <th className="text-right py-2 px-4 text-sm font-medium text-slate-700">Price</th>
-                        <th className="text-right py-2 px-4 text-sm font-medium text-slate-700">Total</th>
+                        <th className="text-left py-2 px-4 text-sm font-medium text-slate-700">
+                          Item
+                        </th>
+                        <th className="text-center py-2 px-4 text-sm font-medium text-slate-700">
+                          Qty
+                        </th>
+                        <th className="text-right py-2 px-4 text-sm font-medium text-slate-700">
+                          Price
+                        </th>
+                        <th className="text-right py-2 px-4 text-sm font-medium text-slate-700">
+                          Total
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200">
@@ -301,14 +506,19 @@ export default function Orders() {
                             {formatCurrency(orderItem.unit_price_paise)}
                           </td>
                           <td className="py-2 px-4 text-sm text-right font-medium text-slate-900">
-                            {formatCurrency(orderItem.unit_price_paise * orderItem.qty)}
+                            {formatCurrency(
+                              orderItem.unit_price_paise * orderItem.qty
+                            )}
                           </td>
                         </tr>
                       ))}
                     </tbody>
                     <tfoot className="bg-slate-50 border-t border-slate-200">
                       <tr>
-                        <td colSpan={3} className="py-2 px-4 text-sm font-medium text-slate-700 text-right">
+                        <td
+                          colSpan={3}
+                          className="py-2 px-4 text-sm font-medium text-slate-700 text-right"
+                        >
                           Items Subtotal
                         </td>
                         <td className="py-2 px-4 text-sm font-medium text-slate-900 text-right">
@@ -316,7 +526,10 @@ export default function Orders() {
                         </td>
                       </tr>
                       <tr>
-                        <td colSpan={3} className="py-2 px-4 text-sm font-medium text-slate-700 text-right">
+                        <td
+                          colSpan={3}
+                          className="py-2 px-4 text-sm font-medium text-slate-700 text-right"
+                        >
                           Delivery Charges
                         </td>
                         <td className="py-2 px-4 text-sm font-medium text-slate-900 text-right">
@@ -324,7 +537,10 @@ export default function Orders() {
                         </td>
                       </tr>
                       <tr>
-                        <td colSpan={3} className="py-2 px-4 text-base font-bold text-slate-900 text-right">
+                        <td
+                          colSpan={3}
+                          className="py-2 px-4 text-base font-bold text-slate-900 text-right"
+                        >
                           Total Amount
                         </td>
                         <td className="py-2 px-4 text-base font-bold text-slate-900 text-right">
@@ -344,24 +560,40 @@ export default function Orders() {
                   </h3>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50 p-4 rounded-lg">
                     <div>
-                      <div className="text-xs text-slate-600">Actual Weight</div>
-                      <div className="font-medium text-slate-900">{selectedOrder.package_weight_grams}g</div>
+                      <div className="text-xs text-slate-600">
+                        Actual Weight
+                      </div>
+                      <div className="font-medium text-slate-900">
+                        {selectedOrder.package_weight_grams}g
+                      </div>
                     </div>
                     {selectedOrder.package_volumetric_grams && (
                       <div>
-                        <div className="text-xs text-slate-600">Volumetric Weight</div>
-                        <div className="font-medium text-slate-900">{selectedOrder.package_volumetric_grams}g</div>
+                        <div className="text-xs text-slate-600">
+                          Volumetric Weight
+                        </div>
+                        <div className="font-medium text-slate-900">
+                          {selectedOrder.package_volumetric_grams}g
+                        </div>
                       </div>
                     )}
                     {selectedOrder.billed_weight_grams && (
                       <div>
-                        <div className="text-xs text-slate-600">Billed Weight</div>
-                        <div className="font-medium text-slate-900">{selectedOrder.billed_weight_grams}g</div>
+                        <div className="text-xs text-slate-600">
+                          Billed Weight
+                        </div>
+                        <div className="font-medium text-slate-900">
+                          {selectedOrder.billed_weight_grams}g
+                        </div>
                       </div>
                     )}
                     <div>
-                      <div className="text-xs text-slate-600">Package Count</div>
-                      <div className="font-medium text-slate-900">{selectedOrder.package_count}</div>
+                      <div className="text-xs text-slate-600">
+                        Package Count
+                      </div>
+                      <div className="font-medium text-slate-900">
+                        {selectedOrder.package_count}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -370,12 +602,13 @@ export default function Orders() {
 
             <div className="p-6 border-t border-slate-200 bg-slate-50">
               <div className="flex justify-end space-x-3">
-                {selectedOrder.status === 'confirmed' && !selectedOrder.courier_awb && (
-                  <button className="flex items-center space-x-2 bg-slate-900 text-white px-4 py-2 rounded-lg hover:bg-slate-800 transition">
-                    <Truck className="w-5 h-5" />
-                    <span>Create Shipment</span>
-                  </button>
-                )}
+                {/* {selectedOrder.status === 'confirmed' &&
+                  !selectedOrder.courier_awb && (
+                    <button className="flex items-center space-x-2 bg-slate-900 text-white px-4 py-2 rounded-lg hover:bg-slate-800 transition">
+                      <Truck className="w-5 h-5" />
+                      <span>Create Shipment</span>
+                    </button>
+                  )} */}
                 <button
                   onClick={() => setSelectedOrder(null)}
                   className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-white transition"

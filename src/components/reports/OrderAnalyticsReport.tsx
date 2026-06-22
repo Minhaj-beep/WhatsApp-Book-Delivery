@@ -1,15 +1,29 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { formatCurrency } from '../../lib/utils';
-import { TrendingUp, Package, DollarSign, CheckCircle } from 'lucide-react';
+import { TrendingUp, Package, DollarSign, CheckCircle, IndianRupee } from 'lucide-react';
 
 interface OrderStats {
   totalOrders: number;
   totalRevenue: number;
   avgOrderValue: number;
   completedOrders: number;
-  ordersByStatus: { status: string; count: number }[];
-  ordersByPayment: { payment_status: string; count: number }[];
+
+  ordersByStatus: {
+    status: string;
+    count: number;
+  }[];
+
+  ordersByPayment: {
+    payment_status: string;
+    count: number;
+  }[];
+
+  ordersByShipmentStatus: {
+    shipment_status: string;
+    count: number;
+  }[];
+
   recentOrders: any[];
 }
 
@@ -21,6 +35,7 @@ export default function OrderAnalyticsReport() {
     completedOrders: 0,
     ordersByStatus: [],
     ordersByPayment: [],
+    ordersByShipmentStatus: [],
     recentOrders: [],
   });
   const [loading, setLoading] = useState(true);
@@ -31,40 +46,153 @@ export default function OrderAnalyticsReport() {
 
   async function loadAnalytics() {
     try {
-      const { data: orders, error } = await supabase
-        .from('orders')
-        .select('*, schools(name)')
-        .order('created_at', { ascending: false })
-        .limit(100);
+      const { data: orders, error } =
+        await supabase
+          .from('orders')
+          .select('*, schools(name)')
+          .order('created_at', {
+            ascending: false,
+          })
+          .limit(100);
 
       if (error) throw error;
 
-      const totalRevenue = orders?.reduce((sum, o) =>
-        o.payment_status === 'paid' ? sum + o.total_amount_paise : sum, 0
-      ) || 0;
+      const totalRevenue =
+        orders?.reduce(
+          (sum, o) =>
+            o.payment_status ===
+            'paid'
+              ? sum +
+                o.total_amount_paise
+              : sum,
+          0
+        ) || 0;
 
-      const statusCounts: { [key: string]: number } = {};
-      const paymentCounts: { [key: string]: number } = {};
+      const statusCounts: Record<
+        string,
+        number
+      > = {};
 
-      orders?.forEach(order => {
-        statusCounts[order.status] = (statusCounts[order.status] || 0) + 1;
-        paymentCounts[order.payment_status] = (paymentCounts[order.payment_status] || 0) + 1;
+      const paymentCounts: Record<
+        string,
+        number
+      > = {};
+
+      const shipmentCounts: Record<
+        string,
+        number
+      > = {};
+
+      orders?.forEach((order) => {
+        // Normalize order status
+        const status = (
+          order.status ||
+          'unknown'
+        )
+          .trim()
+          .toLowerCase();
+
+        statusCounts[status] =
+          (statusCounts[status] ||
+            0) + 1;
+
+        // Normalize payment status
+        const paymentStatus = (
+          order.payment_status ||
+          'unknown'
+        )
+          .trim()
+          .toLowerCase();
+
+        paymentCounts[
+          paymentStatus
+        ] =
+          (paymentCounts[
+            paymentStatus
+          ] || 0) + 1;
+
+        // Normalize shipment status
+        const shipmentStatus =
+          (
+            order.shipment_status ||
+            'pending'
+          )
+            .trim()
+            .toLowerCase();
+
+        shipmentCounts[
+          shipmentStatus
+        ] =
+          (shipmentCounts[
+            shipmentStatus
+          ] || 0) + 1;
       });
 
       setStats({
-        totalOrders: orders?.length || 0,
+        totalOrders:
+          orders?.length || 0,
+
         totalRevenue,
-        avgOrderValue: orders && orders.length > 0 ? totalRevenue / orders.length : 0,
-        completedOrders: orders?.filter(o => o.status === 'delivered').length || 0,
-        ordersByStatus: Object.entries(statusCounts).map(([status, count]) => ({ status, count })),
-        ordersByPayment: Object.entries(paymentCounts).map(([payment_status, count]) => ({
-          payment_status,
-          count
-        })),
-        recentOrders: orders?.slice(0, 5) || [],
+
+        avgOrderValue:
+          orders &&
+          orders.length > 0
+            ? totalRevenue /
+              orders.length
+            : 0,
+
+        completedOrders:
+          orders?.filter(
+            (o) =>
+              o.shipment_status ===
+              'delivered'
+          ).length || 0,
+
+        ordersByStatus:
+          Object.entries(
+            statusCounts
+          ).map(
+            ([status, count]) => ({
+              status,
+              count,
+            })
+          ),
+
+        ordersByPayment:
+          Object.entries(
+            paymentCounts
+          ).map(
+            ([
+              payment_status,
+              count,
+            ]) => ({
+              payment_status,
+              count,
+            })
+          ),
+
+        ordersByShipmentStatus:
+          Object.entries(
+            shipmentCounts
+          ).map(
+            ([
+              shipment_status,
+              count,
+            ]) => ({
+              shipment_status,
+              count,
+            })
+          ),
+
+        recentOrders:
+          orders?.slice(0, 5) ||
+          [],
       });
     } catch (error) {
-      console.error('Error loading analytics:', error);
+      console.error(
+        'Error loading analytics:',
+        error
+      );
     } finally {
       setLoading(false);
     }
@@ -101,7 +229,7 @@ export default function OrderAnalyticsReport() {
 
         <div className="bg-green-50 rounded-lg p-4">
           <div className="flex items-center gap-2 mb-2">
-            <DollarSign className="w-5 h-5 text-green-600" />
+            <IndianRupee className="w-5 h-5 text-green-600" />
             <span className="text-sm font-medium text-green-900">Total Revenue</span>
           </div>
           <p className="text-2xl font-bold text-green-900">{formatCurrency(stats.totalRevenue)}</p>
@@ -124,68 +252,224 @@ export default function OrderAnalyticsReport() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        {/* Orders by Status */}
         <div>
-          <h3 className="text-sm font-semibold text-slate-600 mb-3">Orders by Status</h3>
+          <h3 className="text-sm font-semibold text-slate-600 mb-3">
+            Orders by Status
+          </h3>
+
           <div className="space-y-2">
-            {stats.ordersByStatus.map(({ status, count }) => (
-              <div key={status} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                <span className="text-sm font-medium text-slate-700 capitalize">
-                  {status.replace('_', ' ')}
-                </span>
-                <span className="text-sm font-bold text-slate-900">{count}</span>
-              </div>
-            ))}
+            {stats.ordersByStatus.map(
+              ({ status, count }) => (
+                <div
+                  key={status}
+                  className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
+                >
+                  <span className="text-sm font-medium text-slate-700 capitalize">
+                    {status.replace(
+                      /_/g,
+                      ' '
+                    )}
+                  </span>
+
+                  <span className="text-sm font-bold text-slate-900">
+                    {count}
+                  </span>
+                </div>
+              )
+            )}
           </div>
         </div>
 
+        {/* Payment Status */}
         <div>
-          <h3 className="text-sm font-semibold text-slate-600 mb-3">Payment Status</h3>
+          <h3 className="text-sm font-semibold text-slate-600 mb-3">
+            Payment Status
+          </h3>
+
           <div className="space-y-2">
-            {stats.ordersByPayment.map(({ payment_status, count }) => (
-              <div key={payment_status} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                <span className="text-sm font-medium text-slate-700 capitalize">
-                  {payment_status}
-                </span>
-                <span className="text-sm font-bold text-slate-900">{count}</span>
-              </div>
-            ))}
+            {stats.ordersByPayment.map(
+              ({
+                payment_status,
+                count,
+              }) => (
+                <div
+                  key={payment_status}
+                  className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
+                >
+                  <span className="text-sm font-medium text-slate-700 capitalize">
+                    {payment_status}
+                  </span>
+
+                  <span className="text-sm font-bold text-slate-900">
+                    {count}
+                  </span>
+                </div>
+              )
+            )}
+          </div>
+        </div>
+
+        {/* Shipment Status */}
+        <div>
+          <h3 className="text-sm font-semibold text-slate-600 mb-3">
+            Shipment Status
+          </h3>
+
+          <div className="space-y-2">
+            {stats.ordersByShipmentStatus.map(
+              ({
+                shipment_status,
+                count,
+              }) => (
+                <div
+                  key={
+                    shipment_status
+                  }
+                  className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
+                >
+                  <span className="text-sm font-medium text-slate-700 capitalize">
+                    {shipment_status.replace(
+                      /_/g,
+                      ' '
+                    )}
+                  </span>
+
+                  <span className="text-sm font-bold text-slate-900">
+                    {count}
+                  </span>
+                </div>
+              )
+            )}
           </div>
         </div>
       </div>
 
       <div>
-        <h3 className="text-sm font-semibold text-slate-600 mb-3">Recent Orders</h3>
+        <h3 className="text-sm font-semibold text-slate-600 mb-3">
+          Recent Orders
+        </h3>
+
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-slate-50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Order ID</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">School</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Amount</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Date</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">
+                  Order ID
+                </th>
+
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">
+                  School
+                </th>
+
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">
+                  Amount
+                </th>
+
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">
+                  Status
+                </th>
+
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">
+                  Shipment Status
+                </th>
+
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">
+                  Date
+                </th>
               </tr>
             </thead>
+
             <tbody className="divide-y divide-slate-200">
               {stats.recentOrders.map((order) => (
-                <tr key={order.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 text-sm text-slate-900">##{String(order.id).slice(0, 8)}</td>
-                  <td className="px-4 py-3 text-sm text-slate-900">{order.schools?.name || 'N/A'}</td>
+                <tr
+                  key={order.id}
+                  className="hover:bg-slate-50"
+                >
                   <td className="px-4 py-3 text-sm text-slate-900">
-                    {formatCurrency(order.total_amount_paise)}
+                    #
+                    {String(order.id).slice(
+                      0,
+                      8
+                    )}
                   </td>
+
+                  <td className="px-4 py-3 text-sm text-slate-900">
+                    {order.schools?.name ||
+                      'N/A'}
+                  </td>
+
+                  <td className="px-4 py-3 text-sm text-slate-900">
+                    {formatCurrency(
+                      order.total_amount_paise
+                    )}
+                  </td>
+
+                  {/* Order Status */}
                   <td className="px-4 py-3">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      order.status === 'delivered' ? 'bg-green-100 text-green-800' :
-                      order.status === 'confirmed' ? 'bg-blue-100 text-blue-800' :
-                      'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {order.status}
+                    <span
+                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        order.status ===
+                        'delivered'
+                          ? 'bg-green-100 text-green-800'
+                          : order.status ===
+                            'confirmed'
+                          ? 'bg-blue-100 text-blue-800'
+                          : order.status ===
+                            'processing'
+                          ? 'bg-purple-100 text-purple-800'
+                          : order.status ===
+                            'cancelled'
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}
+                    >
+                      {(
+                        order.status ||
+                        'unknown'
+                      ).replace(/_/g, ' ')}
                     </span>
                   </td>
+
+                  {/* Shipment Status */}
+                  <td className="px-4 py-3">
+                    <span
+                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        order.shipment_status ===
+                        'delivered'
+                          ? 'bg-green-100 text-green-800'
+                          : order.shipment_status ===
+                            'out_for_delivery'
+                          ? 'bg-blue-100 text-blue-800'
+                          : order.shipment_status ===
+                            'in_transit'
+                          ? 'bg-purple-100 text-purple-800'
+                          : order.shipment_status ===
+                            'picked_up'
+                          ? 'bg-indigo-100 text-indigo-800'
+                          : order.shipment_status ===
+                            'cancelled'
+                          ? 'bg-red-100 text-red-800'
+                          : order.shipment_status ===
+                            'non_serviceable'
+                          ? 'bg-orange-100 text-orange-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}
+                    >
+                      {(
+                        order.shipment_status ||
+                        'pending'
+                      )
+                        .replace(/_/g, ' ')
+                        .toLowerCase()}
+                    </span>
+                  </td>
+
                   <td className="px-4 py-3 text-sm text-slate-600">
-                    {new Date(order.created_at).toLocaleDateString()}
+                    {new Date(
+                      order.created_at
+                    ).toLocaleDateString()}
                   </td>
                 </tr>
               ))}

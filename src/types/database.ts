@@ -53,30 +53,82 @@ export interface ClassGroupAssignment {
 
 export type DeliveryType = 'school' | 'home';
 export type PaymentStatus = 'pending' | 'paid' | 'failed';
-export type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'out_for_delivery' | 'delivered' | 'cancelled';
+export type OrderStatus =
+  | 'pending'
+  | 'confirmed'
+  | 'processing'
+  | 'out_for_delivery'
+  | 'delivered'
+  | 'cancelled';
+
+export type ShipmentStatus =
+  | 'pending'
+  | 'manifested'
+  | 'picked_up'
+  | 'in_transit'
+  | 'out_for_delivery'
+  | 'delivered'
+  | 'cancelled'
+  | 'rto'
+  | 'non_serviceable'
+  | 'unknown';
 
 export interface Order {
   id: number;
   school_id: number | null;
   class_id: number | null;
+
   parent_phone: string;
   parent_name: string | null;
+
   delivery_type: DeliveryType;
   delivery_address: string | null;
+  zipcode: string | null;
+
   delivery_charge_paise: number;
   items_total_paise: number;
   total_amount_paise: number;
+
   payment_id: string | null;
   payment_status: PaymentStatus;
+
   status: OrderStatus;
+
+  // NEW
+  shipment_status: ShipmentStatus | null;
+  tracking_status: string | null;
+  tracking_status_code: string | null;
+  tracking_updated_at: string | null;
+  tracking_payload:
+    | Record<string, unknown>
+    | null;
+
   package_count: number;
-  package_weight_grams: number | null;
-  package_volumetric_grams: number | null;
-  billed_weight_grams: number | null;
+
+  package_weight_grams:
+    | number
+    | null;
+
+  package_volumetric_grams:
+    | number
+    | null;
+
+  billed_weight_grams:
+    | number
+    | null;
+
   courier_awb: string | null;
-  courier_service: string | null;
+  courier_service:
+    | string
+    | null;
+
   created_at: string;
-  raw_request: Record<string, unknown>;
+
+  raw_request:
+    | Record<
+        string,
+        unknown
+      >;
 }
 
 export interface OrderItem {

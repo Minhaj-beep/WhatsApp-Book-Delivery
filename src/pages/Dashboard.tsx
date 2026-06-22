@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { DashboardStats } from '../types/database';
 import { formatCurrency } from '../lib/utils';
-import { Package, DollarSign, Truck, AlertCircle } from 'lucide-react';
-import WhatsAppChatsReport from '../components/reports/WhatsAppChatsReport';
+import { Package, IndianRupee, Truck, AlertCircle } from 'lucide-react';
+// import WhatsAppChatsReport from '../components/reports/WhatsAppChatsReport';
 import OrderAnalyticsReport from '../components/reports/OrderAnalyticsReport';
 import SchoolPerformanceReport from '../components/reports/SchoolPerformanceReport';
 
@@ -28,7 +28,7 @@ export default function Dashboard() {
 
       const { data: orders, error } = await supabase
         .from('orders')
-        .select('status, payment_status, total_amount_paise, created_at');
+        .select('status, payment_status, shipment_status, total_amount_paise, created_at');
 
       if (error) throw error;
 
@@ -39,7 +39,7 @@ export default function Dashboard() {
       setStats({
         pending_payments: orders?.filter(o => o.payment_status === 'pending').length || 0,
         confirmed_orders: orders?.filter(o => o.status === 'confirmed').length || 0,
-        out_for_delivery: orders?.filter(o => o.status === 'out_for_delivery').length || 0,
+        out_for_delivery: orders?.filter(o => o.shipment_status === 'out_for_delivery').length || 0,
         total_orders_today: todayOrders.length,
         total_revenue_today_paise: todayOrders
           .filter(o => o.payment_status === 'paid')
@@ -74,7 +74,7 @@ export default function Dashboard() {
     {
       title: "Today's Revenue",
       value: formatCurrency(stats.total_revenue_today_paise),
-      icon: DollarSign,
+      icon: IndianRupee,
       color: 'bg-slate-900',
     },
   ];
@@ -119,7 +119,7 @@ export default function Dashboard() {
       </div>
 
       <div className="space-y-6">
-        <WhatsAppChatsReport />
+        {/* <WhatsAppChatsReport /> */}
         <OrderAnalyticsReport />
         <SchoolPerformanceReport />
       </div>

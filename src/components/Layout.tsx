@@ -23,7 +23,7 @@ const navigation = [
   { name: 'Schools', page: 'schools', icon: School },
   { name: 'Items & Groups', page: 'items', icon: BookOpen },
   { name: 'Orders', page: 'orders', icon: ShoppingCart },
-  { name: 'Settings', page: 'settings', icon: Settings },
+  // { name: 'Settings', page: 'settings', icon: Settings },
 ];
 
 export default function Layout({ children, currentPage, onNavigate }: LayoutProps) {
