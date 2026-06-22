@@ -7,6 +7,7 @@ export interface Profile {
 }
 
 export interface School {
+  zipcode: string;
   id: number;
   name: string;
   code_4digit: string;
